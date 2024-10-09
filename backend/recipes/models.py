@@ -61,3 +61,20 @@ class FoodgramUser(AbstractUser):
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ('username',)
+
+
+class Subscription(models.Model):
+    subscriber = models.ForeignKey(
+        FoodgramUser, on_delete=models.CASCADE, related_name='subscriber'
+    )
+    following = models.ForeignKey(
+        FoodgramUser, on_delete=models.CASCADE, related_name='following'
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('subscriber', 'following'),
+                name='unique_subscriber_following'
+            )
+        ]

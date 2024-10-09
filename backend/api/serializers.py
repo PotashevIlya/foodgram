@@ -3,7 +3,7 @@ import base64
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import FoodgramUser
+from recipes.models import FoodgramUser, Subscription
 
 
 class Base64ImageField(serializers.ImageField):
@@ -29,12 +29,24 @@ class FoodgramUserCreateSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
-    
+
+
 class FoodgramUserReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodgramUser
         fields = ('email', 'id', 'username',
                   'first_name', 'last_name', 'avatar')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if len(self.context) == 0:
+            data['is_subscribed'] = False
+            return data
+        if Subscription.objects.filter(subscriber=self.context['request'].user, following=instance).exists():
+            data['is_subscribed'] = True
+            return data
+        data['is_subscribed'] = False
+        return data
 
 
 class AvatarSerializer(serializers.Serializer):
@@ -51,3 +63,20 @@ class AvatarSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
     current_password = serializers.CharField(required=True)
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Subscription
+        fields = ('subscriber', 'following')
+
+    def create(self, validated_data):
+        subscription = Subscription.objects.create(
+            following=validated_data['following'], subscriber=validated_data['subscriber'])
+        return subscription
+
+    def to_representation(self, instance):
+        data = FoodgramUserReadSerializer().to_representation(FoodgramUser.objects.get(id=instance.following_id))
+        data['is_subscribed'] = True
+        return data

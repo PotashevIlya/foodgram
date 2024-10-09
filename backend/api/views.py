@@ -1,15 +1,16 @@
 from http import HTTPStatus
 
 from rest_framework import viewsets, permissions
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import FoodgramUser
+from recipes.models import FoodgramUser, Subscription
 from .serializers import (AvatarSerializer,
                           ChangePasswordSerializer,
                           FoodgramUserCreateSerializer,
-                          FoodgramUserReadSerializer
+                          FoodgramUserReadSerializer,
+                          SubscriptionSerializer,
                           )
 
 
@@ -50,6 +51,7 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
     )
     def me(self, request):
         serializer = FoodgramUserReadSerializer(request.user)
+        serializer.data['is_subscribed'] = False
         return Response(serializer.data, status=HTTPStatus.OK)
 
     @action(
@@ -68,3 +70,21 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
             current_user.save()
             return Response(status=HTTPStatus.NO_CONTENT)
         return Response({'error': 'Старый пароль не правильный'})
+
+@api_view(['POST', 'DELETE'])
+def manage_subscribe(request, id):
+    if request.method == 'POST':
+        data = {}
+        data['subscriber'] = request.user.id
+        data['following'] = id
+        serializer = SubscriptionSerializer(data=data)
+        serializer.is_valid()
+        serializer.save()
+        return Response(serializer.data, status=HTTPStatus.OK)
+    if request.method == 'DELETE':
+        subscriber = FoodgramUser.objects.get(id=request.user.id)
+        following = FoodgramUser.objects.get(id=id)
+        instance = Subscription.objects.filter(following=following, subscriber=subscriber)
+        instance.delete()
+        return Response(status=HTTPStatus.NO_CONTENT)
+        
