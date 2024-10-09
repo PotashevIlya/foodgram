@@ -49,6 +49,17 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
         detail=False,
         permission_classes=(IsAuthenticated,)
     )
+    def subscriptions(self, request):
+        queryset = FoodgramUser.objects.get(id=request.user.id).subscriber
+        serializer = SubscriptionSerializer(queryset, many=True)
+        return Response(serializer.data, status=HTTPStatus.OK)
+    
+    
+    
+    @action(
+        detail=False,
+        permission_classes=(IsAuthenticated,)
+    )
     def me(self, request):
         serializer = FoodgramUserReadSerializer(request.user)
         serializer.data['is_subscribed'] = False
@@ -71,13 +82,16 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
             return Response(status=HTTPStatus.NO_CONTENT)
         return Response({'error': 'Старый пароль не правильный'})
 
+
+
+
 @api_view(['POST', 'DELETE'])
 def manage_subscribe(request, id):
     if request.method == 'POST':
         data = {}
         data['subscriber'] = request.user.id
         data['following'] = id
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionWriteSerializer(data=data)
         serializer.is_valid()
         serializer.save()
         return Response(serializer.data, status=HTTPStatus.OK)

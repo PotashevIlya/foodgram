@@ -80,3 +80,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         data = FoodgramUserReadSerializer().to_representation(FoodgramUser.objects.get(id=instance.following_id))
         data['is_subscribed'] = True
         return data
+    
+
+
+
