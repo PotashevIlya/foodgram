@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import FoodgramUserViewSet, manage_subscribe, TagViewSet
+from .views import FoodgramUserViewSet, manage_subscribe, TagViewSet, IngredientViewSet
 
 router = DefaultRouter()
 router.register(
@@ -13,6 +13,11 @@ router.register(
     'tags',
     TagViewSet,
     basename='tags'
+)
+router.register(
+    'ingredients',
+    IngredientViewSet,
+    basename='ingredients'
 )
 
 urlpatterns = [

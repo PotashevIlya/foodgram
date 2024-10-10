@@ -5,13 +5,14 @@ from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import FoodgramUser, Subscription, Tag
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient
 from .serializers import (AvatarSerializer,
                           ChangePasswordSerializer,
                           FoodgramUserCreateSerializer,
                           FoodgramUserReadSerializer,
                           SubscriptionSerializer,
-                          TagSerializer
+                          TagSerializer,
+                          IngredientSerializer
                           )
 
 
@@ -104,3 +105,7 @@ def manage_subscribe(request, id):
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer

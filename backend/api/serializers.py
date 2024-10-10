@@ -3,7 +3,7 @@ import base64
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import FoodgramUser, Subscription, Tag
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient
 
 
 class Base64ImageField(serializers.ImageField):
@@ -86,4 +86,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
+        fields = '__all__'
+
+
+class IngredientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ingredient
         fields = '__all__'
