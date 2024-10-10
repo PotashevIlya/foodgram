@@ -99,9 +99,19 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField()
+    amount = serializers.IntegerField()
+    
+    class Meta:
+        model = RecipeIngredient
+        fields = ('amount', 'id')
+        
+
+
 class RecipeSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
-    # ingredients = IngredientSerializer()
+    ingredients = RecipeIngredientSerializer(many=True)
     tags = TagSerializer(many=True)
     author = serializers.PrimaryKeyRelatedField(read_only=True)
 
@@ -121,10 +131,16 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
         for tag_id in tags:
             current_tag = Tag.objects.get(**tag_id)
             RecipeTag.objects.create(recipe=recipe, tag=current_tag)
+        for ingredient in ingredients:
+            ingredient_id = ingredient.pop('id')
+            ingredient_amount = ingredient.pop('amount')
+            current_ingredient = Ingredient.objects.get(id=ingredient_id)
+            RecipeIngredient.objects.create(recipe=recipe, ingredient=current_ingredient, amount=ingredient_amount)
         return recipe
 
     def to_representation(self, instance):
@@ -133,3 +149,4 @@ class RecipeSerializer(serializers.ModelSerializer):
             FoodgramUser.objects.get(id=self.context['request'].user.id))
         data['author'] = author_data
         return data
+        
