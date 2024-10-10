@@ -81,6 +81,9 @@ class Subscription(models.Model):
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
 
+    def __str__(self):
+        return f'Подписка {self.subscriber} на {self.following}'
+
 
 class Tag(models.Model):
     name = models.CharField(
@@ -103,3 +106,30 @@ class Tag(models.Model):
     class Meta:
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
+
+    def __str__(self):
+        return f'{self.name}'
+
+
+class Ingredient(models.Model):
+    name = models.CharField(
+        verbose_name='Название ингредиента',
+        max_length=128,
+        blank=False,
+        null=False,
+        help_text='Укажите название ингредиента'
+    )
+    measurement_unit = models.CharField(
+        verbose_name='Единица измерения',
+        max_length=64,
+        blank=False,
+        null=False,
+        help_text='Укажите единицу измерения'
+    )
+
+    class Meta:
+        verbose_name = 'Ингредиент'
+        verbose_name_plural = 'Ингредиенты'
+
+    def __str__(self):
+        return f'{self.name}'[:32]
