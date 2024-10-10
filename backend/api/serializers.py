@@ -3,7 +3,7 @@ import base64
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, RecipeTag
 
 
 class Base64ImageField(serializers.ImageField):
@@ -84,12 +84,52 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField()
+
     class Meta:
         model = Tag
         fields = '__all__'
+        read_only_fields = ('name', 'slug')
 
 
 class IngredientSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Ingredient
         fields = '__all__'
+
+
+class RecipeSerializer(serializers.ModelSerializer):
+    image = Base64ImageField()
+    # ingredients = IngredientSerializer()
+    tags = TagSerializer(many=True)
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'tags', 'author', 'ingredients',
+                  'name', 'image', 'text', 'cooking_time')
+
+    def to_internal_value(self, data):
+        tags_id = data.pop('tags')
+        formatted_tags_data = []
+        for tag_id in tags_id:
+            temp = dict(id=tag_id)
+            formatted_tags_data.append(temp)
+        data['tags'] = formatted_tags_data
+        return super().to_internal_value(data)
+
+    def create(self, validated_data):
+        tags = validated_data.pop('tags')
+        recipe = Recipe.objects.create(**validated_data)
+        for tag_id in tags:
+            current_tag = Tag.objects.get(**tag_id)
+            RecipeTag.objects.create(recipe=recipe, tag=current_tag)
+        return recipe
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        author_data = FoodgramUserReadSerializer().to_representation(
+            FoodgramUser.objects.get(id=self.context['request'].user.id))
+        data['author'] = author_data
+        return data

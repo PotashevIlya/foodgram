@@ -5,14 +5,15 @@ from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient,Recipe
 from .serializers import (AvatarSerializer,
                           ChangePasswordSerializer,
                           FoodgramUserCreateSerializer,
                           FoodgramUserReadSerializer,
                           SubscriptionSerializer,
                           TagSerializer,
-                          IngredientSerializer
+                          IngredientSerializer,
+                          RecipeSerializer
                           )
 
 
@@ -109,3 +110,13 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
+    serializer_class = RecipeSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    
+        
