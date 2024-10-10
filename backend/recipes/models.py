@@ -78,3 +78,28 @@ class Subscription(models.Model):
                 name='unique_subscriber_following'
             )
         ]
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+
+
+class Tag(models.Model):
+    name = models.CharField(
+        verbose_name='Название тега',
+        max_length=32,
+        unique=True,
+        blank=False,
+        null=False,
+        help_text='Укажите название тега'
+    )
+    slug = models.SlugField(
+        verbose_name='Слаг тега',
+        max_length=32,
+        unique=True,
+        blank=False,
+        null=False,
+        help_text='Укажите слаг тега'
+    )
+
+    class Meta:
+        verbose_name = 'Тег'
+        verbose_name_plural = 'Теги'

@@ -5,12 +5,13 @@ from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import FoodgramUser, Subscription
+from recipes.models import FoodgramUser, Subscription, Tag
 from .serializers import (AvatarSerializer,
                           ChangePasswordSerializer,
                           FoodgramUserCreateSerializer,
                           FoodgramUserReadSerializer,
                           SubscriptionSerializer,
+                          TagSerializer
                           )
 
 
@@ -53,9 +54,7 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
         queryset = FoodgramUser.objects.get(id=request.user.id).subscriber
         serializer = SubscriptionSerializer(queryset, many=True)
         return Response(serializer.data, status=HTTPStatus.OK)
-    
-    
-    
+
     @action(
         detail=False,
         permission_classes=(IsAuthenticated,)
@@ -83,22 +82,25 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
         return Response({'error': 'Старый пароль не правильный'})
 
 
-
-
 @api_view(['POST', 'DELETE'])
 def manage_subscribe(request, id):
     if request.method == 'POST':
         data = {}
         data['subscriber'] = request.user.id
         data['following'] = id
-        serializer = SubscriptionWriteSerializer(data=data)
+        serializer = SubscriptionSerializer(data=data)
         serializer.is_valid()
         serializer.save()
         return Response(serializer.data, status=HTTPStatus.OK)
     if request.method == 'DELETE':
         subscriber = FoodgramUser.objects.get(id=request.user.id)
         following = FoodgramUser.objects.get(id=id)
-        instance = Subscription.objects.filter(following=following, subscriber=subscriber)
+        instance = Subscription.objects.filter(
+            following=following, subscriber=subscriber)
         instance.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
-        
+
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer

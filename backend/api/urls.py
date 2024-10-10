@@ -1,13 +1,18 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import FoodgramUserViewSet, manage_subscribe
+from .views import FoodgramUserViewSet, manage_subscribe, TagViewSet
 
 router = DefaultRouter()
 router.register(
     'users',
     FoodgramUserViewSet,
     basename='users'
+)
+router.register(
+    'tags',
+    TagViewSet,
+    basename='tags'
 )
 
 urlpatterns = [
