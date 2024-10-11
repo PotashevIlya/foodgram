@@ -99,19 +99,51 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class RecipeIngredientSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField()
-    amount = serializers.IntegerField()
-    
+class RecipeIngredientReadSerializer(serializers.ModelSerializer):
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
+
     class Meta:
         model = RecipeIngredient
-        fields = ('amount', 'id')
-        
+        exclude = ('recipe', 'ingredient')
 
 
-class RecipeSerializer(serializers.ModelSerializer):
+class RecipeReadSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
-    ingredients = RecipeIngredientSerializer(many=True)
+    tags = TagSerializer(many=True)
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
+    ingredients = RecipeIngredientReadSerializer(read_only=True)
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'tags', 'author','ingredients',
+                  'name', 'image', 'text', 'cooking_time')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        author_data = FoodgramUserReadSerializer().to_representation(
+            FoodgramUser.objects.get(id=self.context['request'].user.id))
+        data['author'] = author_data
+        # recipe_ingredient_data = RecipeIngredientReadSerializer(
+        # ).to_representation(RecipeIngredient.objects.get(id=7))
+        # print(recipe_ingredient_data)
+        # data['ingredients'] = recipe_ingredient_data
+        return data
+
+
+class RecipeIngredientWriteSerializer(serializers.Serializer):
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    id = serializers.IntegerField()
+    amount = serializers.IntegerField()
+    class Meta:
+        model = RecipeIngredient
+        exclude = ('recipe', 'ingredient')
+
+
+
+class RecipeWriteSerializer(serializers.ModelSerializer):
+    image = Base64ImageField()
+    ingredients = serializers.ListField(write_only=True)
     tags = TagSerializer(many=True)
     author = serializers.PrimaryKeyRelatedField(read_only=True)
 
@@ -140,7 +172,8 @@ class RecipeSerializer(serializers.ModelSerializer):
             ingredient_id = ingredient.pop('id')
             ingredient_amount = ingredient.pop('amount')
             current_ingredient = Ingredient.objects.get(id=ingredient_id)
-            RecipeIngredient.objects.create(recipe=recipe, ingredient=current_ingredient, amount=ingredient_amount)
+            RecipeIngredient.objects.create(
+                recipe=recipe, ingredient=current_ingredient, amount=ingredient_amount)
         return recipe
 
     def to_representation(self, instance):
@@ -148,5 +181,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         author_data = FoodgramUserReadSerializer().to_representation(
             FoodgramUser.objects.get(id=self.context['request'].user.id))
         data['author'] = author_data
+        # recipe_ingredient_data = RecipeIngredientReadSerializer(
+        # ).to_representation(RecipeIngredient.objects.get(id=7))
+        # data['ingredients'] = recipe_ingredient_data
         return data
-        
+

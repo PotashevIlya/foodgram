@@ -160,7 +160,7 @@ class Recipe(models.Model):
         help_text='Загрузите изображение рецепта'
     )
     text = models.TextField()
-    ingredients = models.ManyToManyField(
+    ingredient = models.ManyToManyField(
         Ingredient, through='RecipeIngredient'
     )
     tags = models.ManyToManyField(
