@@ -5,6 +5,8 @@ from rest_framework import serializers
 
 from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, RecipeTag
 
+from django.shortcuts import get_object_or_404
+
 
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
@@ -112,22 +114,27 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     tags = TagSerializer(many=True)
     author = serializers.PrimaryKeyRelatedField(read_only=True)
-    ingredients = RecipeIngredientReadSerializer(read_only=True)
+
+    
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author','ingredients',
+        fields = ('id', 'tags', 'author',
                   'name', 'image', 'text', 'cooking_time')
+    
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         author_data = FoodgramUserReadSerializer().to_representation(
             FoodgramUser.objects.get(id=self.context['request'].user.id))
         data['author'] = author_data
-        # recipe_ingredient_data = RecipeIngredientReadSerializer(
-        # ).to_representation(RecipeIngredient.objects.get(id=7))
-        # print(recipe_ingredient_data)
-        # data['ingredients'] = recipe_ingredient_data
+        recipe_ingredient_data = None
+        try:
+            recipe_ingredient_data = RecipeIngredientReadSerializer(
+            ).to_representation(get_object_or_404(RecipeIngredient, recipe_id=instance.id))
+        except Exception:
+            pass
+        data['ingredients'] = recipe_ingredient_data
         return data
 
 
@@ -181,8 +188,12 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         author_data = FoodgramUserReadSerializer().to_representation(
             FoodgramUser.objects.get(id=self.context['request'].user.id))
         data['author'] = author_data
-        # recipe_ingredient_data = RecipeIngredientReadSerializer(
-        # ).to_representation(RecipeIngredient.objects.get(id=7))
-        # data['ingredients'] = recipe_ingredient_data
+        recipe_ingredient_data = None
+        try:
+            recipe_ingredient_data = RecipeIngredientReadSerializer(
+            ).to_representation(get_object_or_404(RecipeIngredient, recipe_id=instance.id))
+        except Exception:
+            pass
+        data['ingredients'] = recipe_ingredient_data
         return data
 
