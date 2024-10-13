@@ -3,7 +3,7 @@ import base64
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, RecipeTag
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient
 
 from django.shortcuts import get_object_or_404
 
@@ -86,12 +86,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField()
 
     class Meta:
         model = Tag
         fields = '__all__'
-        read_only_fields = ('name', 'slug')
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -101,80 +99,51 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class RecipeIngredientReadSerializer(serializers.ModelSerializer):
-    name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
+class RecipeIngredientsReadSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source='ingredient.name')
+    measurement_unit = serializers.CharField(source='ingredient.measurement_unit')
+    amount = serializers.IntegerField()
+
 
     class Meta:
         model = RecipeIngredient
-        exclude = ('recipe', 'ingredient')
+        fields = ('id', 'name', 'measurement_unit', 'amount')
+
+class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField()
+    amount = serializers.IntegerField()
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'amount')
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
-    image = Base64ImageField()
-    tags = TagSerializer(many=True)
-    author = serializers.PrimaryKeyRelatedField(read_only=True)
-
-    
+    tags = TagSerializer(read_only=True, many=True)
+    author = FoodgramUserReadSerializer()
+    ingredients = RecipeIngredientsReadSerializer(many=True, source='recipeingredients')
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author',
-                  'name', 'image', 'text', 'cooking_time')
-    
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        author_data = FoodgramUserReadSerializer().to_representation(
-            FoodgramUser.objects.get(id=self.context['request'].user.id))
-        data['author'] = author_data
-        recipe_ingredient_data = None
-        try:
-            recipe_ingredient_data = RecipeIngredientReadSerializer(
-            ).to_representation(get_object_or_404(RecipeIngredient, recipe_id=instance.id))
-        except Exception:
-            pass
-        data['ingredients'] = recipe_ingredient_data
-        return data
-
-
-class RecipeIngredientWriteSerializer(serializers.Serializer):
-    name = serializers.ReadOnlyField(source='ingredient.name')
-    id = serializers.IntegerField()
-    amount = serializers.IntegerField()
-    class Meta:
-        model = RecipeIngredient
-        exclude = ('recipe', 'ingredient')
-
+        fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
+    tags = serializers.PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all())
+    author = serializers.PrimaryKeyRelatedField(read_only=True) 
     image = Base64ImageField()
-    ingredients = serializers.ListField(write_only=True)
-    tags = TagSerializer(many=True)
-    author = serializers.PrimaryKeyRelatedField(read_only=True)
+    ingredients = RecipeIngredientWriteSerializer(many=True, source='recipeingredients')
+
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients',
-                  'name', 'image', 'text', 'cooking_time')
-
-    def to_internal_value(self, data):
-        tags_id = data.pop('tags')
-        formatted_tags_data = []
-        for tag_id in tags_id:
-            temp = dict(id=tag_id)
-            formatted_tags_data.append(temp)
-        data['tags'] = formatted_tags_data
-        return super().to_internal_value(data)
+        fields = ('tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
 
     def create(self, validated_data):
+        ingredients = validated_data.pop('recipeingredients')
         tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
-        for tag_id in tags:
-            current_tag = Tag.objects.get(**tag_id)
-            RecipeTag.objects.create(recipe=recipe, tag=current_tag)
+        recipe.tags.set(tags)
         for ingredient in ingredients:
             ingredient_id = ingredient.pop('id')
             ingredient_amount = ingredient.pop('amount')
@@ -183,17 +152,28 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 recipe=recipe, ingredient=current_ingredient, amount=ingredient_amount)
         return recipe
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        author_data = FoodgramUserReadSerializer().to_representation(
-            FoodgramUser.objects.get(id=self.context['request'].user.id))
-        data['author'] = author_data
-        recipe_ingredient_data = None
-        try:
-            recipe_ingredient_data = RecipeIngredientReadSerializer(
-            ).to_representation(get_object_or_404(RecipeIngredient, recipe_id=instance.id))
-        except Exception:
-            pass
-        data['ingredients'] = recipe_ingredient_data
-        return data
+    def update(self, instance, validated_data):
+        instance.image = validated_data.get('image', instance.image)
+        instance.name = validated_data.pop('name')
+        instance.text = validated_data.pop('text')
+        instance.cooking_time = validated_data.pop('cooking_time')
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('recipeingredients')
+        instance.tags.clear()
+        instance.tags.set(tags)
+        instance.ingredients.clear()
+        for ingredient in ingredients:
+            ingredient_id = ingredient.pop('id')
+            ingredient_amount = ingredient.pop('amount')
+            current_ingredient = Ingredient.objects.get(id=ingredient_id)
+            RecipeIngredient.objects.create(
+                recipe=instance, ingredient=current_ingredient, amount=ingredient_amount)
+        instance.save()
+        return instance
 
+        
+
+
+
+    def to_representation(self, instance):
+        return RecipeReadSerializer().to_representation(instance)

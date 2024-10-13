@@ -160,12 +160,10 @@ class Recipe(models.Model):
         help_text='Загрузите изображение рецепта'
     )
     text = models.TextField()
-    ingredient = models.ManyToManyField(
+    ingredients = models.ManyToManyField(
         Ingredient, through='RecipeIngredient'
     )
-    tags = models.ManyToManyField(
-        Tag, through='RecipeTag'
-    )
+    tags = models.ManyToManyField(Tag)
     cooking_time = models.PositiveIntegerField(
         validators=[
             MinValueValidator(
@@ -187,25 +185,15 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='recipe_ingredient')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.IntegerField()
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
+        default_related_name = 'recipeingredients'
     
     def __str__(self):
         return f'{self.ingredient} в {self.recipe}'
 
-
-class RecipeTag(models.Model):
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
-    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
-
-    class Meta:
-        verbose_name = 'Рецепт в категории'
-        verbose_name_plural = 'Рецепт в категориях'
-    
-    def __str__(self):
-        return f'{self.recipe} в категории {self.tag}'
