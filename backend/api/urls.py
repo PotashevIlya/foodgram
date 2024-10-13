@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import FoodgramUserViewSet, manage_subscribe, TagViewSet, IngredientViewSet, RecipeViewSet
+from .views import FoodgramUserViewSet, manage_subscribe, TagViewSet, IngredientViewSet, RecipeViewSet, get_short_url
 
 router = DefaultRouter()
 router.register(
@@ -28,5 +28,6 @@ router.register(
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
     path('users/<int:id>/subscribe', manage_subscribe),
+    path('recipes/<int:id>/get-link/', get_short_url),
     path('', include(router.urls)),
 ]

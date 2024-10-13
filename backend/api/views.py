@@ -1,8 +1,9 @@
 from http import HTTPStatus
 
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action, api_view
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe
@@ -124,3 +125,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.request.method in permissions.SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeWriteSerializer
+
+@api_view(['GET'])
+def get_short_url(request, id):
+    recipe = get_object_or_404(Recipe, id=id)
+    url = request.build_absolute_uri().replace('get-link/', '')
+    return Response({'short-link': url})

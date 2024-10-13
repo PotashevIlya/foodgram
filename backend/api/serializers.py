@@ -101,13 +101,14 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientsReadSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='ingredient.name')
-    measurement_unit = serializers.CharField(source='ingredient.measurement_unit')
+    measurement_unit = serializers.CharField(
+        source='ingredient.measurement_unit')
     amount = serializers.IntegerField()
-
 
     class Meta:
         model = RecipeIngredient
         fields = ('id', 'name', 'measurement_unit', 'amount')
+
 
 class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
@@ -121,23 +122,27 @@ class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
 class RecipeReadSerializer(serializers.ModelSerializer):
     tags = TagSerializer(read_only=True, many=True)
     author = FoodgramUserReadSerializer()
-    ingredients = RecipeIngredientsReadSerializer(many=True, source='recipeingredients')
+    ingredients = RecipeIngredientsReadSerializer(
+        many=True, source='recipeingredients')
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
+        fields = ('id', 'tags', 'author', 'ingredients',
+                  'name', 'image', 'text', 'cooking_time')
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
-    tags = serializers.PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all())
-    author = serializers.PrimaryKeyRelatedField(read_only=True) 
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Tag.objects.all())
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
     image = Base64ImageField()
-    ingredients = RecipeIngredientWriteSerializer(many=True, source='recipeingredients')
-
+    ingredients = RecipeIngredientWriteSerializer(
+        many=True, source='recipeingredients')
 
     class Meta:
         model = Recipe
-        fields = ('tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
+        fields = ('tags', 'author', 'ingredients',
+                  'name', 'image', 'text', 'cooking_time')
 
     def create(self, validated_data):
         ingredients = validated_data.pop('recipeingredients')
@@ -170,10 +175,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 recipe=instance, ingredient=current_ingredient, amount=ingredient_amount)
         instance.save()
         return instance
-
-        
-
-
 
     def to_representation(self, instance):
         return RecipeReadSerializer().to_representation(instance)
