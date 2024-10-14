@@ -180,7 +180,7 @@ def manage_shopping_cart(request, id):
 @api_view(['GET'])
 def download_shopping_cart(request):
     data = RecipeIngredient.objects.filter(
-        recipe__shopping_carts__user=request.user).values(
+        recipe__shopping_carts__user_id=request.user.id).values(
             'ingredient__name', 'ingredient__measurement_unit').annotate(
                 ingredient_sum=Sum('amount')
     )

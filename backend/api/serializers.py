@@ -42,7 +42,7 @@ class FoodgramUserReadSerializer(serializers.ModelSerializer):
         if len(self.context) == 0:
             data['is_subscribed'] = False
             return data
-        if Subscription.objects.filter(subscriber=self.context['request'].user, following=instance).exists():
+        if Subscription.objects.filter(subscriber_id=self.context['request'].user.id, following_id=instance.id).exists():
             data['is_subscribed'] = True
             return data
         data['is_subscribed'] = False
@@ -127,8 +127,8 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['is_favorited'] = Favourite.objects.filter(user=self.context['request'].user, recipe=instance).exists()
-        data['is_in_shopping_cart'] = ShoppingCart.objects.filter(user=self.context['request'].user, recipe=instance).exists()
+        data['is_favorited'] = Favourite.objects.filter(user_id=self.context['request'].user.id, recipe=instance).exists()
+        data['is_in_shopping_cart'] = ShoppingCart.objects.filter(user_id=self.context['request'].user.id, recipe=instance).exists()
         return data
 
 
