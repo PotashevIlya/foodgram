@@ -3,7 +3,7 @@ import base64
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, Favourite
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, Favourite, ShoppingCart
 
 
 class Base64ImageField(serializers.ImageField):
@@ -128,6 +128,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data['is_favorited'] = Favourite.objects.filter(user=self.context['request'].user, recipe=instance).exists()
+        data['is_in_shopping_cart'] = ShoppingCart.objects.filter(user=self.context['request'].user, recipe=instance).exists()
         return data
 
 
@@ -197,3 +198,15 @@ class FavouriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return RecipeBriefSerializer().to_representation(Recipe.objects.get(id=instance.recipe.id))
+    
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
+
+    class Meta:
+        model = ShoppingCart
+        fields = ('user', 'recipe')
+
+    def to_representation(self, instance):
+        return RecipeBriefSerializer().to_representation(Recipe.objects.get(id=instance.recipe.id))
+

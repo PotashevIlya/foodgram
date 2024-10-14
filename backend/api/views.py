@@ -3,10 +3,10 @@ from http import HTTPStatus
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action, api_view
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, Favourite
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, Favourite, ShoppingCart
 from .serializers import (AvatarSerializer,
                           ChangePasswordSerializer,
                           FoodgramUserCreateSerializer,
@@ -16,7 +16,8 @@ from .serializers import (AvatarSerializer,
                           IngredientSerializer,
                           RecipeWriteSerializer,
                           RecipeReadSerializer,
-                          FavouriteSerializer
+                          FavouriteSerializer,
+                          ShoppingCartSerializer
                           )
 
 
@@ -148,6 +149,25 @@ def manage_favourite(request, id):
         user = FoodgramUser.objects.get(id=request.user.id)
         recipe = Recipe.objects.get(id=id)
         instance = Favourite.objects.filter(
+            user=user, recipe=recipe)
+        instance.delete()
+        return Response(status=HTTPStatus.NO_CONTENT)
+    
+@api_view(['POST', 'DELETE'])
+def manage_shopping_cart(request, id):
+    if request.method == 'POST':
+        data = {}
+        data['user'] = request.user.id
+        data['recipe'] = id
+        serializer = ShoppingCartSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=HTTPStatus.CREATED)
+        return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
+    if request.method == 'DELETE':
+        user = FoodgramUser.objects.get(id=request.user.id)
+        recipe = Recipe.objects.get(id=id)
+        instance = ShoppingCart.objects.filter(
             user=user, recipe=recipe)
         instance.delete()
         return Response(status=HTTPStatus.NO_CONTENT)

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient
+from .models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, Favourite, ShoppingCart
 
 
 class FoodgramUserAdmin(UserAdmin):
@@ -16,3 +16,5 @@ admin.site.register(Tag)
 admin.site.register(Ingredient)
 admin.site.register(Recipe)
 admin.site.register(RecipeIngredient)
+admin.site.register(Favourite)
+admin.site.register(ShoppingCart)

@@ -206,7 +206,7 @@ class Favourite(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=('user', 'recipe'),
-                name='unique_user_recipe'
+                name='unique_favourite'
             )
         ]
         verbose_name = 'Избранное'
@@ -214,3 +214,20 @@ class Favourite(models.Model):
 
     def __str__(self):
         return f'{self.recipe} в избранном у {self.user}'
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_shopping_cart'
+            )
+        ]
+        verbose_name = 'Список покупок'
+        verbose_name_plural = 'Список покупок'
+
+    def __str__(self):
+        return f'{self.recipe} в списке покупок у {self.user}'
