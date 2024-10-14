@@ -3,9 +3,7 @@ import base64
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient
-
-from django.shortcuts import get_object_or_404
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, Favourite
 
 
 class Base64ImageField(serializers.ImageField):
@@ -68,15 +66,12 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-
+    subscriber = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
+    following = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
+    
     class Meta:
         model = Subscription
         fields = ('subscriber', 'following')
-
-    def create(self, validated_data):
-        subscription = Subscription.objects.create(
-            following=validated_data['following'], subscriber=validated_data['subscriber'])
-        return subscription
 
     def to_representation(self, instance):
         data = FoodgramUserReadSerializer().to_representation(
@@ -129,6 +124,11 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = ('id', 'tags', 'author', 'ingredients',
                   'name', 'image', 'text', 'cooking_time')
+        
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['is_favorited'] = Favourite.objects.filter(user=self.context['request'].user, recipe=instance).exists()
+        return data
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
@@ -178,3 +178,22 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return RecipeReadSerializer().to_representation(instance)
+
+
+class RecipeBriefSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
+class FavouriteSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
+
+    class Meta:
+        model = Favourite
+        fields = ('user', 'recipe')
+
+    def to_representation(self, instance):
+        return RecipeBriefSerializer().to_representation(Recipe.objects.get(id=instance.recipe.id))

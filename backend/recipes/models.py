@@ -193,7 +193,24 @@ class RecipeIngredient(models.Model):
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
         default_related_name = 'recipeingredients'
-    
+
     def __str__(self):
         return f'{self.ingredient} в {self.recipe}'
 
+
+class Favourite(models.Model):
+    user = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_user_recipe'
+            )
+        ]
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+
+    def __str__(self):
+        return f'{self.recipe} в избранном у {self.user}'
