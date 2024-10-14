@@ -1,12 +1,13 @@
 from http import HTTPStatus
 
-from django.shortcuts import get_object_or_404
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404, HttpResponse
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, Favourite, ShoppingCart
+from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, Favourite, ShoppingCart, RecipeIngredient
 from .serializers import (AvatarSerializer,
                           ChangePasswordSerializer,
                           FoodgramUserCreateSerializer,
@@ -128,11 +129,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeReadSerializer
         return RecipeWriteSerializer
 
+
 @api_view(['GET'])
 def get_short_url(request, id):
     recipe = get_object_or_404(Recipe, id=id)
     url = request.build_absolute_uri().replace('get-link/', '')
     return Response({'short-link': url})
+
 
 @api_view(['POST', 'DELETE'])
 def manage_favourite(request, id):
@@ -152,7 +155,8 @@ def manage_favourite(request, id):
             user=user, recipe=recipe)
         instance.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
-    
+
+
 @api_view(['POST', 'DELETE'])
 def manage_shopping_cart(request, id):
     if request.method == 'POST':
@@ -171,4 +175,22 @@ def manage_shopping_cart(request, id):
             user=user, recipe=recipe)
         instance.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
-    
+
+
+@api_view(['GET'])
+def download_shopping_cart(request):
+    data = RecipeIngredient.objects.filter(
+        recipe__shopping_carts__user=request.user).values(
+            'ingredient__name', 'ingredient__measurement_unit').annotate(
+                ingredient_sum=Sum('amount')
+    )
+    shopping_cart = []
+    for ingredient in data:
+        name = ingredient['ingredient__name']
+        measurement_unit = ingredient['ingredient__measurement_unit']
+        amount = ingredient['ingredient_sum']
+        shopping_cart.append(
+            f'- {name} в количестве {amount} {measurement_unit}\n')
+    response = HttpResponse(shopping_cart, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+    return response
