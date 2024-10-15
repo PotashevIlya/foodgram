@@ -1,9 +1,14 @@
 import base64
 
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
-from rest_framework import serializers
+from rest_framework import serializers, validators
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, RecipeIngredient, Favourite, ShoppingCart
+from recipes.models import (FoodgramUser, Subscription, Tag,
+                            Ingredient, Recipe, RecipeIngredient, Favourite, ShoppingCart,
+                            MAX_USERNAME_LENGTH, MAX_PASSWORD_LENGTH, MAX_EMAIL_LENGTH, MAX_RECIPE_NAME_LENGTH, MIN_COOKING_TIME)
+from recipes.validators import validate_username
 
 
 class Base64ImageField(serializers.ImageField):
@@ -16,7 +21,12 @@ class Base64ImageField(serializers.ImageField):
 
 
 class FoodgramUserCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(
+        write_only=True, max_length=MAX_PASSWORD_LENGTH)
+    username = serializers.CharField(max_length=MAX_USERNAME_LENGTH)
+    first_name = serializers.CharField(max_length=MAX_USERNAME_LENGTH)
+    last_name = serializers.CharField(max_length=MAX_USERNAME_LENGTH)
+    email = serializers.CharField(max_length=MAX_EMAIL_LENGTH)
 
     class Meta:
         model = FoodgramUser
@@ -29,6 +39,9 @@ class FoodgramUserCreateSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
+    def validate_username(self, value):
+        return validate_username(value)
 
 
 class FoodgramUserReadSerializer(serializers.ModelSerializer):
@@ -61,23 +74,88 @@ class AvatarSerializer(serializers.Serializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    new_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(
+        required=True, max_length=MAX_PASSWORD_LENGTH)
     current_password = serializers.CharField(required=True)
 
+    def validate_current_password(self, value):
+        current_user = self.initial_data['user']
+        if not current_user.check_password(value):
+            raise serializers.ValidationError(
+                'Старый пароль неверен'
+            )
+        return value
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    subscriber = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
-    following = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
-    
+
+class RecipeBriefSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+# class SubscriptionSerializer(serializers.ModelSerializer):
+#     subscriber = serializers.PrimaryKeyRelatedField(
+#         queryset=FoodgramUser.objects.all())
+#     following = serializers.PrimaryKeyRelatedField(
+#         queryset=FoodgramUser.objects.all())
+
+#     class Meta:
+#         model = Subscription
+#         fields = ('subscriber', 'following')
+#         validators = (validators.UniqueTogetherValidator(
+#                 queryset=Subscription.objects.all(),
+#                 fields=('subscriber', 'following'),
+#                 message=('Вы уже подписаны на этого пользователя')
+#             ),
+#         )
+
+#     def to_representation(self, instance):
+#         user = FoodgramUser.objects.get(id=instance.following_id)
+#         data = FoodgramUserReadSerializer().to_representation(
+#             user)
+#         count = user.recipes.aggregate(recipes_count=Count())
+#         print(count)
+#         data['is_subscribed'] = True
+#         return data
+
+
+class SubscriptionReadSerializer(serializers.ModelSerializer):
+    recipes = RecipeBriefSerializer(many=True, read_only=True)
+    recipes_count = serializers.IntegerField(
+        read_only=True, source='recipes.count')
+    is_subscribed = serializers.BooleanField(default=True)
+
+    class Meta:
+        model = FoodgramUser
+        fields = ('email', 'id', 'username', 'first_name', 'last_name',
+                  'is_subscribed', 'avatar', 'recipes', 'recipes_count')
+
+
+class SubscriptionWriteSerializer(serializers.ModelSerializer):
+    subscriber = serializers.PrimaryKeyRelatedField(
+        queryset=FoodgramUser.objects.all())
+    following = serializers.PrimaryKeyRelatedField(
+        queryset=FoodgramUser.objects.all())
+
     class Meta:
         model = Subscription
         fields = ('subscriber', 'following')
+        validators = (validators.UniqueTogetherValidator(
+            queryset=Subscription.objects.all(),
+            fields=('subscriber', 'following'),
+            message=('Вы уже подписаны на этого пользователя')
+        ),
+        )
 
-    def to_representation(self, instance):
-        data = FoodgramUserReadSerializer().to_representation(
-            FoodgramUser.objects.get(id=instance.following_id))
-        data['is_subscribed'] = True
+    def validate(self, data):
+        if data['subscriber'] == data['following']:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на себя самого'
+            )
         return data
+    
+    def to_representation(self, instance):
+        user = FoodgramUser.objects.get(id=instance.following_id)
+        return SubscriptionReadSerializer().to_representation(user)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -124,11 +202,13 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = ('id', 'tags', 'author', 'ingredients',
                   'name', 'image', 'text', 'cooking_time')
-        
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['is_favorited'] = Favourite.objects.filter(user_id=self.context['request'].user.id, recipe=instance).exists()
-        data['is_in_shopping_cart'] = ShoppingCart.objects.filter(user_id=self.context['request'].user.id, recipe=instance).exists()
+        data['is_favorited'] = Favourite.objects.filter(
+            user_id=self.context['request'].user.id, recipe=instance).exists()
+        data['is_in_shopping_cart'] = ShoppingCart.objects.filter(
+            user_id=self.context['request'].user.id, recipe=instance).exists()
         return data
 
 
@@ -139,11 +219,23 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     ingredients = RecipeIngredientWriteSerializer(
         many=True, source='recipeingredients')
+    name = serializers.CharField(max_length=MAX_RECIPE_NAME_LENGTH)
+    cooking_time = serializers.IntegerField(
+        min_value=MIN_COOKING_TIME,
+        error_messages={
+            'min_value': f'Время приготовления не может быть меньше {MIN_COOKING_TIME}'
+        }
+    )
 
     class Meta:
         model = Recipe
         fields = ('tags', 'author', 'ingredients',
                   'name', 'image', 'text', 'cooking_time')
+
+    def validate_ingredients(self, ingredients):
+        for ingredient in ingredients:
+            ingredient = get_object_or_404(Ingredient, id=ingredient['id'])
+        return ingredients
 
     def create(self, validated_data):
         ingredients = validated_data.pop('recipeingredients')
@@ -181,32 +273,39 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return RecipeReadSerializer().to_representation(instance)
 
 
-class RecipeBriefSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
-
-
 class FavouriteSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=FoodgramUser.objects.all())
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
     class Meta:
         model = Favourite
         fields = ('user', 'recipe')
+        validators = (validators.UniqueTogetherValidator(
+            queryset=ShoppingCart.objects.all(),
+            fields=('user', 'recipe'),
+            message=('Этот рецепт уже есть в избранном')
+        ),
+        )
 
     def to_representation(self, instance):
         return RecipeBriefSerializer().to_representation(Recipe.objects.get(id=instance.recipe.id))
-    
+
+
 class ShoppingCartSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=FoodgramUser.objects.all())
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=FoodgramUser.objects.all())
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
     class Meta:
         model = ShoppingCart
         fields = ('user', 'recipe')
+        validators = (validators.UniqueTogetherValidator(
+            queryset=ShoppingCart.objects.all(),
+            fields=('user', 'recipe'),
+            message=('Этот рецепт уже есть в списке покупок')
+        ),
+        )
 
     def to_representation(self, instance):
         return RecipeBriefSerializer().to_representation(Recipe.objects.get(id=instance.recipe.id))
-

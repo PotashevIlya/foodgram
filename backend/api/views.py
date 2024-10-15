@@ -3,8 +3,8 @@ from http import HTTPStatus
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, HttpResponse
 from rest_framework import viewsets, permissions
-from rest_framework.decorators import action, api_view
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, Favourite, ShoppingCart, RecipeIngredient
@@ -12,7 +12,8 @@ from .serializers import (AvatarSerializer,
                           ChangePasswordSerializer,
                           FoodgramUserCreateSerializer,
                           FoodgramUserReadSerializer,
-                          SubscriptionSerializer,
+                          SubscriptionReadSerializer,
+                          SubscriptionWriteSerializer,
                           TagSerializer,
                           IngredientSerializer,
                           RecipeWriteSerializer,
@@ -20,6 +21,7 @@ from .serializers import (AvatarSerializer,
                           FavouriteSerializer,
                           ShoppingCartSerializer
                           )
+from .permissions import IsAuthorOrReadOnly
 
 
 class FoodgramUserViewSet(viewsets.GenericViewSet,
@@ -27,6 +29,7 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
                           viewsets.mixins.CreateModelMixin,
                           viewsets.mixins.RetrieveModelMixin):
     queryset = FoodgramUser.objects.all()
+    permission_classes = (AllowAny,)
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
@@ -58,8 +61,9 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
         permission_classes=(IsAuthenticated,)
     )
     def subscriptions(self, request):
-        queryset = FoodgramUser.objects.get(id=request.user.id).subscriber
-        serializer = SubscriptionSerializer(queryset, many=True)
+        queryset = FoodgramUser.objects.filter(
+            following__subscriber=request.user)
+        serializer = SubscriptionReadSerializer(queryset, many=True)
         return Response(serializer.data, status=HTTPStatus.OK)
 
     @action(
@@ -77,40 +81,44 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
         methods=('POST',)
     )
     def set_password(self, request):
+        request.data['user'] = FoodgramUser.objects.get(id=request.user.id)
         serializer = ChangePasswordSerializer(data=request.data)
-        serializer.is_valid()
-        current_password = serializer.validated_data['current_password']
-        new_password = serializer.validated_data['new_password']
-        current_user = FoodgramUser.objects.get(id=request.user.id)
-        if current_user.check_password(current_password):
-            current_user.set_password(new_password)
+        if serializer.is_valid():
+            current_user = FoodgramUser.objects.get(id=request.user.id)
+            current_user.set_password(
+                serializer.validated_data['new_password'])
             current_user.save()
             return Response(status=HTTPStatus.NO_CONTENT)
-        return Response({'error': 'Старый пароль не правильный'})
+        return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
 
 
 @api_view(['POST', 'DELETE'])
 def manage_subscribe(request, id):
     if request.method == 'POST':
+        following = get_object_or_404(FoodgramUser, id=id)
         data = {}
         data['subscriber'] = request.user.id
         data['following'] = id
-        serializer = SubscriptionSerializer(data=data)
-        serializer.is_valid()
-        serializer.save()
-        return Response(serializer.data, status=HTTPStatus.OK)
+        serializer = SubscriptionWriteSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=HTTPStatus.CREATED)
+        return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
     if request.method == 'DELETE':
+        following = get_object_or_404(FoodgramUser, id=id)
         subscriber = FoodgramUser.objects.get(id=request.user.id)
-        following = FoodgramUser.objects.get(id=id)
         instance = Subscription.objects.filter(
             following=following, subscriber=subscriber)
-        instance.delete()
-        return Response(status=HTTPStatus.NO_CONTENT)
+        if instance.exists():
+            instance.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+    return Response({'error': 'Нельзя оптисаться от пользователя, на которого вы не были подписаны'}, status=HTTPStatus.BAD_REQUEST)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    permission_classes = (AllowAny,)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -120,6 +128,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -131,6 +140,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['GET'])
+@permission_classes((AllowAny,))
 def get_short_url(request, id):
     recipe = get_object_or_404(Recipe, id=id)
     url = request.build_absolute_uri().replace('get-link/', '')
@@ -140,6 +150,7 @@ def get_short_url(request, id):
 @api_view(['POST', 'DELETE'])
 def manage_favourite(request, id):
     if request.method == 'POST':
+        recipe = get_object_or_404(Recipe, id=id)
         data = {}
         data['user'] = request.user.id
         data['recipe'] = id
@@ -150,16 +161,20 @@ def manage_favourite(request, id):
         return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
     if request.method == 'DELETE':
         user = FoodgramUser.objects.get(id=request.user.id)
-        recipe = Recipe.objects.get(id=id)
+        recipe = get_object_or_404(Recipe, id=id)
         instance = Favourite.objects.filter(
             user=user, recipe=recipe)
-        instance.delete()
-        return Response(status=HTTPStatus.NO_CONTENT)
+        if instance.exists():
+            instance.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        return Response({'error': 'Нельзя удалить из избранного рецепт, которого там нет'}, status=HTTPStatus.BAD_REQUEST)
 
 
 @api_view(['POST', 'DELETE'])
+@permission_classes((IsAuthenticated,))
 def manage_shopping_cart(request, id):
     if request.method == 'POST':
+        recipe = get_object_or_404(Recipe, id=id)
         data = {}
         data['user'] = request.user.id
         data['recipe'] = id
@@ -170,20 +185,24 @@ def manage_shopping_cart(request, id):
         return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
     if request.method == 'DELETE':
         user = FoodgramUser.objects.get(id=request.user.id)
-        recipe = Recipe.objects.get(id=id)
+        recipe = get_object_or_404(Recipe, id=id)
         instance = ShoppingCart.objects.filter(
             user=user, recipe=recipe)
-        instance.delete()
-        return Response(status=HTTPStatus.NO_CONTENT)
+        if instance.exists():
+            instance.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        return Response({'error': 'Нельзя удалить из списка покупок рецепт, которого там нет'}, status=HTTPStatus.BAD_REQUEST)
 
 
 @api_view(['GET'])
+@permission_classes((IsAuthenticated,))
 def download_shopping_cart(request):
     data = RecipeIngredient.objects.filter(
         recipe__shopping_carts__user_id=request.user.id).values(
             'ingredient__name', 'ingredient__measurement_unit').annotate(
                 ingredient_sum=Sum('amount')
     )
+    print(data)
     shopping_cart = []
     for ingredient in data:
         name = ingredient['ingredient__name']

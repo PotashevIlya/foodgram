@@ -8,6 +8,7 @@ MAX_USERNAME_LENGTH = 150
 MAX_EMAIL_LENGTH = 254
 MAX_PASSWORD_LENGTH = 128
 MIN_COOKING_TIME = 1
+MAX_RECIPE_NAME_LENGTH = 256
 
 
 class FoodgramUser(AbstractUser):
@@ -147,7 +148,7 @@ class Recipe(models.Model):
     )
     name = models.CharField(
         verbose_name='Название рецепта',
-        max_length=256,
+        max_length=MAX_RECIPE_NAME_LENGTH,
         blank=False,
         null=False,
         help_text='Укажите название рецепта'

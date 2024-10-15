@@ -29,10 +29,10 @@ router.register(
 
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
-    path('users/<int:id>/subscribe', manage_subscribe),
+    path('users/<int:id>/subscribe/', manage_subscribe),
     path('recipes/<int:id>/get-link/', get_short_url),
-    path('recipes/<int:id>/favourite', manage_favourite, name='favourite'),
-    path('recipes/<int:id>/shopping_cart', manage_shopping_cart, name='shopping_cart'),
-    path('recipes/download_shopping_cart', download_shopping_cart, name='download_shopping_cart'),
+    path('recipes/<int:id>/favorite/', manage_favourite, name='favourite'),
+    path('recipes/<int:id>/shopping_cart/', manage_shopping_cart, name='shopping_cart'),
+    path('recipes/download_shopping_cart/', download_shopping_cart, name='download_shopping_cart'),
     path('', include(router.urls)),
 ]
