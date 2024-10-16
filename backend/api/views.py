@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+
+from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, HttpResponse
 from rest_framework import viewsets, permissions
@@ -22,6 +24,8 @@ from .serializers import (AvatarSerializer,
                           ShoppingCartSerializer
                           )
 from .permissions import IsAuthorOrReadOnly
+from .filters import IngredientsFilter, RecipeFilter
+from .pagination import CustomPagination
 
 
 class FoodgramUserViewSet(viewsets.GenericViewSet,
@@ -30,6 +34,7 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
                           viewsets.mixins.RetrieveModelMixin):
     queryset = FoodgramUser.objects.all()
     permission_classes = (AllowAny,)
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
@@ -60,16 +65,6 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
         detail=False,
         permission_classes=(IsAuthenticated,)
     )
-    def subscriptions(self, request):
-        queryset = FoodgramUser.objects.filter(
-            following__subscriber=request.user)
-        serializer = SubscriptionReadSerializer(queryset, many=True)
-        return Response(serializer.data, status=HTTPStatus.OK)
-
-    @action(
-        detail=False,
-        permission_classes=(IsAuthenticated,)
-    )
     def me(self, request):
         serializer = FoodgramUserReadSerializer(request.user)
         serializer.data['is_subscribed'] = False
@@ -90,6 +85,15 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
             current_user.save()
             return Response(status=HTTPStatus.NO_CONTENT)
         return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
+
+
+class MySubscriptionsViewSet(viewsets.GenericViewSet, viewsets.mixins.ListModelMixin):
+    serializer_class = SubscriptionReadSerializer
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        return FoodgramUser.objects.filter(
+            following__subscriber=self.request.user)
 
 
 @api_view(['POST', 'DELETE'])
@@ -124,19 +128,29 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    pagination_class = None
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientsFilter
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
+    pagination_class = CustomPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def perform_update(self, serializer):
         serializer.save(author=self.request.user)
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeWriteSerializer
+    
 
 
 @api_view(['GET'])

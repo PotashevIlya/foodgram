@@ -92,37 +92,21 @@ class RecipeBriefSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
-# class SubscriptionSerializer(serializers.ModelSerializer):
-#     subscriber = serializers.PrimaryKeyRelatedField(
-#         queryset=FoodgramUser.objects.all())
-#     following = serializers.PrimaryKeyRelatedField(
-#         queryset=FoodgramUser.objects.all())
-
-#     class Meta:
-#         model = Subscription
-#         fields = ('subscriber', 'following')
-#         validators = (validators.UniqueTogetherValidator(
-#                 queryset=Subscription.objects.all(),
-#                 fields=('subscriber', 'following'),
-#                 message=('Вы уже подписаны на этого пользователя')
-#             ),
-#         )
-
-#     def to_representation(self, instance):
-#         user = FoodgramUser.objects.get(id=instance.following_id)
-#         data = FoodgramUserReadSerializer().to_representation(
-#             user)
-#         count = user.recipes.aggregate(recipes_count=Count())
-#         print(count)
-#         data['is_subscribed'] = True
-#         return data
 
 
 class SubscriptionReadSerializer(serializers.ModelSerializer):
-    recipes = RecipeBriefSerializer(many=True, read_only=True)
+    recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
         read_only=True, source='recipes.count')
     is_subscribed = serializers.BooleanField(default=True)
+
+    def get_recipes(self, obj):
+        recipes_limit = self.context['request'].query_params.get(
+            'recipes_limit')
+        if recipes_limit:
+            recipes_limit = int(recipes_limit)
+            return RecipeBriefSerializer(obj.recipes.all()[:recipes_limit], many=True).data
+        return RecipeBriefSerializer(obj.recipes.all(), many=True).data
 
     class Meta:
         model = FoodgramUser
@@ -152,7 +136,7 @@ class SubscriptionWriteSerializer(serializers.ModelSerializer):
                 'Нельзя подписаться на себя самого'
             )
         return data
-    
+
     def to_representation(self, instance):
         user = FoodgramUser.objects.get(id=instance.following_id)
         return SubscriptionReadSerializer().to_representation(user)
@@ -191,25 +175,24 @@ class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
         model = RecipeIngredient
         fields = ('id', 'amount')
 
-
 class RecipeReadSerializer(serializers.ModelSerializer):
     tags = TagSerializer(read_only=True, many=True)
     author = FoodgramUserReadSerializer()
     ingredients = RecipeIngredientsReadSerializer(
         many=True, source='recipeingredients')
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients',
+        fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited', 'is_in_shopping_cart',
                   'name', 'image', 'text', 'cooking_time')
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['is_favorited'] = Favourite.objects.filter(
-            user_id=self.context['request'].user.id, recipe=instance).exists()
-        data['is_in_shopping_cart'] = ShoppingCart.objects.filter(
-            user_id=self.context['request'].user.id, recipe=instance).exists()
-        return data
+    def get_is_favorited(self, obj):
+        return Favourite.objects.filter(user_id=self.context['request'].user.id, recipe = obj).exists()
+
+    def get_is_in_shopping_cart(self, obj):
+        return ShoppingCart.objects.filter(user_id=self.context['request'].user.id, recipe = obj).exists()
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
