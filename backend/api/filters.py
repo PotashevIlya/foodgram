@@ -6,7 +6,7 @@ class IngredientsFilter(filter.FilterSet):
 
     name = filter.CharFilter(
         field_name='name',
-        lookup_expr='contains'
+        lookup_expr='startswith'
     )
 
     class Meta:

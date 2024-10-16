@@ -40,8 +40,19 @@ class FoodgramUserCreateSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-    def validate_username(self, value):
-        return validate_username(value)
+    def validate_username(self, username):
+        if FoodgramUser.objects.filter(username=username).exists():
+            raise serializers.ValidationError(
+                'Этот username занят'
+            )
+        return validate_username(username)
+    
+    def validate_email(self, email):
+        if FoodgramUser.objects.filter(email=email).exists():
+            raise serializers.ValidationError(
+                'Пользователь с таким e-mail уже существует'
+            )
+        return email
 
 
 class FoodgramUserReadSerializer(serializers.ModelSerializer):
@@ -189,9 +200,13 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                   'name', 'image', 'text', 'cooking_time')
 
     def get_is_favorited(self, obj):
+        if len(self.context) == 0:
+            return False
         return Favourite.objects.filter(user_id=self.context['request'].user.id, recipe = obj).exists()
 
     def get_is_in_shopping_cart(self, obj):
+        if len(self.context) == 0:
+            return False
         return ShoppingCart.objects.filter(user_id=self.context['request'].user.id, recipe = obj).exists()
 
 
@@ -216,10 +231,56 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'name', 'image', 'text', 'cooking_time')
 
     def validate_ingredients(self, ingredients):
+        if len(ingredients) == 0:
+            raise serializers.ValidationError(
+                'Нельзя создать рецепт без ингредиентов'
+            )
+        initial_ingredients = []
         for ingredient in ingredients:
-            ingredient = get_object_or_404(Ingredient, id=ingredient['id'])
+            if Ingredient.objects.filter(id=ingredient['id']).exists() == False:
+                raise serializers.ValidationError(
+                    'Ингредиента не существует'
+                )
+            if ingredient['amount'] < 1:
+                raise serializers.ValidationError(
+                    'Укажите ингредиент в количестве не меньше 1'
+                )
+            if ingredient in initial_ingredients:
+                raise serializers.ValidationError(
+                    'Ингредиенты не должны повторяться'
+                )
+            initial_ingredients.append(ingredient)
         return ingredients
-
+    
+    def validate_tags(self, tags):
+        if len(tags) == 0:
+            raise serializers.ValidationError(
+                'Укажите хотя бы один тег рецепта'
+            )
+        if 'tags' not in self.initial_data:
+            raise serializers.ValidationError(
+                'Укажите хотя бы один тег'
+            )
+        initial_tags = []
+        for tag in tags:
+            if tag in initial_tags:
+                raise serializers.ValidationError(
+                    'Теги не должны повторяться'
+                )
+            initial_tags.append(tag)
+        return tags
+    
+    def validate(self, data):
+        if 'recipeingredients' not in data:
+            raise serializers.ValidationError(
+                'Нельзя создать рецепт без ингредиентов'
+            )
+        if 'tags' not in data:
+            raise serializers.ValidationError(
+                'Укажите хотя бы один тег'
+            ) 
+        return data
+    
     def create(self, validated_data):
         ingredients = validated_data.pop('recipeingredients')
         tags = validated_data.pop('tags')
@@ -253,7 +314,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
-        return RecipeReadSerializer().to_representation(instance)
+        return RecipeReadSerializer().to_representation(instance) 
 
 
 class FavouriteSerializer(serializers.ModelSerializer):
