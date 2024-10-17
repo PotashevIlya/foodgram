@@ -112,11 +112,10 @@ class SubscriptionReadSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.BooleanField(default=True)
 
     def get_recipes(self, obj):
-        recipes_limit = self.context['request'].query_params.get(
-            'recipes_limit')
+        context = self.context.get('request')
+        recipes_limit = context.query_params.get('recipes_limit')
         if recipes_limit:
-            recipes_limit = int(recipes_limit)
-            return RecipeBriefSerializer(obj.recipes.all()[:recipes_limit], many=True).data
+            return RecipeBriefSerializer(obj.recipes.all()[:int(recipes_limit)], many=True).data
         return RecipeBriefSerializer(obj.recipes.all(), many=True).data
 
     class Meta:
@@ -149,8 +148,8 @@ class SubscriptionWriteSerializer(serializers.ModelSerializer):
         return data
 
     def to_representation(self, instance):
-        user = FoodgramUser.objects.get(id=instance.following_id)
-        return SubscriptionReadSerializer().to_representation(user)
+        print(self.context)
+        return SubscriptionReadSerializer(instance.following, context={'request': self.context['request']}).data
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -206,6 +205,8 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
     def get_is_in_shopping_cart(self, obj):
         if len(self.context) == 0:
+            return False
+        if self.context['request'].user.is_authenticated == False:
             return False
         return ShoppingCart.objects.filter(user_id=self.context['request'].user.id, recipe = obj).exists()
 
@@ -326,7 +327,7 @@ class FavouriteSerializer(serializers.ModelSerializer):
         model = Favourite
         fields = ('user', 'recipe')
         validators = (validators.UniqueTogetherValidator(
-            queryset=ShoppingCart.objects.all(),
+            queryset=Favourite.objects.all(),
             fields=('user', 'recipe'),
             message=('Этот рецепт уже есть в избранном')
         ),

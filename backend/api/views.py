@@ -4,7 +4,7 @@ from http import HTTPStatus
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, HttpResponse
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, views
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -96,19 +96,19 @@ class MySubscriptionsViewSet(viewsets.GenericViewSet, viewsets.mixins.ListModelM
             following__subscriber=self.request.user)
 
 
-@api_view(['POST', 'DELETE'])
-def manage_subscribe(request, id):
-    if request.method == 'POST':
+class SubscribtionManagerView(views.APIView):
+    def post(self, request, id):
         following = get_object_or_404(FoodgramUser, id=id)
         data = {}
         data['subscriber'] = request.user.id
         data['following'] = id
-        serializer = SubscriptionWriteSerializer(data=data)
-        if serializer.is_valid():
+        serializer = SubscriptionWriteSerializer(data=data, context = {'request': request})
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=HTTPStatus.CREATED)
         return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
-    if request.method == 'DELETE':
+    
+    def delete(self, request, id):
         following = get_object_or_404(FoodgramUser, id=id)
         subscriber = FoodgramUser.objects.get(id=request.user.id)
         instance = Subscription.objects.filter(
@@ -116,7 +116,8 @@ def manage_subscribe(request, id):
         if instance.exists():
             instance.delete()
             return Response(status=HTTPStatus.NO_CONTENT)
-    return Response({'error': 'Нельзя оптисаться от пользователя, на которого вы не были подписаны'}, status=HTTPStatus.BAD_REQUEST)
+        return Response({'error': 'Нельзя оптисаться от пользователя, на которого вы не были подписаны'}, status=HTTPStatus.BAD_REQUEST)
+
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
