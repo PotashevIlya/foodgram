@@ -1,5 +1,5 @@
-from django.core.validators import MinValueValidator
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from .validators import validate_username
@@ -135,13 +135,14 @@ class Ingredient(models.Model):
         verbose_name_plural = 'Ингредиенты'
 
     def __str__(self):
-        return f'{self.name}'[:32]
+        return f'{self.name}, ед.измерения - {self.measurement_unit}.'
 
 
 class Recipe(models.Model):
     author = models.ForeignKey(
         FoodgramUser,
         on_delete=models.CASCADE,
+        verbose_name='Автор'
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
@@ -160,12 +161,15 @@ class Recipe(models.Model):
         blank=False,
         help_text='Загрузите изображение рецепта'
     )
-    text = models.TextField()
+    text = models.TextField(verbose_name='Подробный рецепт')
     ingredients = models.ManyToManyField(
-        Ingredient, through='RecipeIngredient'
+        Ingredient,
+        verbose_name='Ингредиенты',
+        through='RecipeIngredient'
     )
-    tags = models.ManyToManyField(Tag)
+    tags = models.ManyToManyField(Tag, verbose_name='Теги')
     cooking_time = models.PositiveIntegerField(
+        verbose_name='Время приготовления',
         validators=[
             MinValueValidator(
                 MIN_COOKING_TIME,
@@ -182,13 +186,19 @@ class Recipe(models.Model):
         default_related_name = 'recipes'
 
     def __str__(self):
-        return self.name[:24]
+        return f'{self.name}. Повар - {self.author}.'
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.IntegerField()
+    recipe = models.ForeignKey(Recipe, 
+                               on_delete=models.CASCADE,
+                               verbose_name='Рецепт'
+                               )
+    ingredient = models.ForeignKey(Ingredient, 
+                                   on_delete=models.CASCADE,
+                                   verbose_name='Игнредиент'
+                                   )
+    amount = models.IntegerField(verbose_name='Количество')
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
@@ -199,9 +209,17 @@ class RecipeIngredient(models.Model):
         return f'{self.ingredient} в {self.recipe}'
 
 
-class Favourite(models.Model):
-    user = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+class UserRecipeBaseModel(models.Model):
+    user = models.ForeignKey(
+        FoodgramUser, on_delete=models.CASCADE, verbose_name='Пользователь')
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, verbose_name='Рецепт')
+
+    class Meta:
+        abstract = True
+
+
+class Favourite(UserRecipeBaseModel):
 
     class Meta:
         constraints = [
@@ -217,9 +235,8 @@ class Favourite(models.Model):
     def __str__(self):
         return f'{self.recipe} в избранном у {self.user}'
 
-class ShoppingCart(models.Model):
-    user = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+class ShoppingCart(UserRecipeBaseModel):
 
     class Meta:
         constraints = [
@@ -229,7 +246,7 @@ class ShoppingCart(models.Model):
             )
         ]
         verbose_name = 'Список покупок'
-        verbose_name_plural = 'Список покупок'
+        verbose_name_plural = 'Списки покупок'
         default_related_name = 'shopping_carts'
 
     def __str__(self):
