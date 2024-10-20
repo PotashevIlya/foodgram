@@ -1,5 +1,6 @@
 from rest_framework import permissions
 
+
 class IsAuthorOrReadOnly(permissions.BasePermission):
 
     message = 'Нельзя изменять рецепты других пользователей'

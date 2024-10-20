@@ -1,31 +1,27 @@
 from http import HTTPStatus
 
-
-from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum
-from django.shortcuts import get_object_or_404, HttpResponse
-from rest_framework import viewsets, permissions, views
+from django.shortcuts import HttpResponse, get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import permissions, views, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
-from recipes.models import FoodgramUser, Subscription, Tag, Ingredient, Recipe, Favourite, ShoppingCart, RecipeIngredient
-from .serializers import (AvatarSerializer,
-                          ChangePasswordSerializer,
-                          FoodgramUserCreateSerializer,
-                          FoodgramUserReadSerializer,
-                          SubscriptionReadSerializer,
-                          SubscriptionWriteSerializer,
-                          TagSerializer,
-                          IngredientSerializer,
-                          RecipeWriteSerializer,
-                          RecipeReadSerializer,
-                          FavouriteSerializer,
-                          ShoppingCartSerializer
-                          )
-from .permissions import IsAuthorOrReadOnly
+from recipes.models import (Favourite, FoodgramUser, Ingredient, Recipe,
+                            RecipeIngredient, ShoppingCart, Subscription, Tag)
+
 from .filters import IngredientsFilter, RecipeFilter
 from .pagination import CustomPagination
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (AvatarSerializer, ChangePasswordSerializer,
+                          FavouriteSerializer, FoodgramUserCreateSerializer,
+                          FoodgramUserReadSerializer, IngredientSerializer,
+                          RecipeReadSerializer, RecipeWriteSerializer,
+                          ShoppingCartSerializer, SubscriptionReadSerializer,
+                          SubscriptionWriteSerializer, TagSerializer)
+from .utils import create_object, delete_object
 
 
 class FoodgramUserViewSet(viewsets.GenericViewSet,
@@ -67,7 +63,6 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
     )
     def me(self, request):
         serializer = FoodgramUserReadSerializer(request.user)
-        serializer.data['is_subscribed'] = False
         return Response(serializer.data, status=HTTPStatus.OK)
 
     @action(
@@ -78,7 +73,7 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
     def set_password(self, request):
         request.data['user'] = FoodgramUser.objects.get(id=request.user.id)
         serializer = ChangePasswordSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             current_user = FoodgramUser.objects.get(id=request.user.id)
             current_user.set_password(
                 serializer.validated_data['new_password'])
@@ -87,7 +82,8 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
         return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
 
 
-class MySubscriptionsViewSet(viewsets.GenericViewSet, viewsets.mixins.ListModelMixin):
+class MySubscriptionsViewSet(viewsets.GenericViewSet,
+                             viewsets.mixins.ListModelMixin):
     serializer_class = SubscriptionReadSerializer
     pagination_class = CustomPagination
 
@@ -99,15 +95,14 @@ class MySubscriptionsViewSet(viewsets.GenericViewSet, viewsets.mixins.ListModelM
 class SubscribtionManagerView(views.APIView):
     def post(self, request, id):
         following = get_object_or_404(FoodgramUser, id=id)
-        data = {}
-        data['subscriber'] = request.user.id
-        data['following'] = id
-        serializer = SubscriptionWriteSerializer(data=data, context = {'request': request})
+        data = dict(subscriber=request.user.id, following=following.id)
+        serializer = SubscriptionWriteSerializer(
+            data=data, context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=HTTPStatus.CREATED)
         return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
-    
+
     def delete(self, request, id):
         following = get_object_or_404(FoodgramUser, id=id)
         subscriber = FoodgramUser.objects.get(id=request.user.id)
@@ -116,8 +111,10 @@ class SubscribtionManagerView(views.APIView):
         if instance.exists():
             instance.delete()
             return Response(status=HTTPStatus.NO_CONTENT)
-        return Response({'error': 'Нельзя оптисаться от пользователя, на которого вы не были подписаны'}, status=HTTPStatus.BAD_REQUEST)
-
+        return Response(
+            {'error': 'Вы не были подписаны на этого пользователя'},
+            status=HTTPStatus.BAD_REQUEST
+        )
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -153,9 +150,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.request.method in permissions.SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeWriteSerializer
-    
-
-    
 
 
 @api_view(['GET'])
@@ -169,48 +163,19 @@ def get_short_url(request, id):
 @api_view(['POST', 'DELETE'])
 def manage_favourite(request, id):
     if request.method == 'POST':
-        recipe = get_object_or_404(Recipe, id=id)
-        data = {}
-        data['user'] = request.user.id
-        data['recipe'] = id
-        serializer = FavouriteSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=HTTPStatus.CREATED)
-        return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
+        return create_object(request, id, FavouriteSerializer)
+
     if request.method == 'DELETE':
-        user = FoodgramUser.objects.get(id=request.user.id)
-        recipe = get_object_or_404(Recipe, id=id)
-        instance = Favourite.objects.filter(
-            user=user, recipe=recipe)
-        if instance.exists():
-            instance.delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        return Response({'error': 'Нельзя удалить из избранного рецепт, которого там нет'}, status=HTTPStatus.BAD_REQUEST)
+        return delete_object(request, id, Favourite, 'избранное')
 
 
 @api_view(['POST', 'DELETE'])
 @permission_classes((IsAuthenticated,))
 def manage_shopping_cart(request, id):
     if request.method == 'POST':
-        recipe = get_object_or_404(Recipe, id=id)
-        data = {}
-        data['user'] = request.user.id
-        data['recipe'] = id
-        serializer = ShoppingCartSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=HTTPStatus.CREATED)
-        return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
+        return create_object(request, id, ShoppingCartSerializer)
     if request.method == 'DELETE':
-        user = FoodgramUser.objects.get(id=request.user.id)
-        recipe = get_object_or_404(Recipe, id=id)
-        instance = ShoppingCart.objects.filter(
-            user=user, recipe=recipe)
-        if instance.exists():
-            instance.delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        return Response({'error': 'Нельзя удалить из списка покупок рецепт, которого там нет'}, status=HTTPStatus.BAD_REQUEST)
+        return delete_object(request, id, ShoppingCart, 'список покупок')
 
 
 @api_view(['GET'])
@@ -221,7 +186,6 @@ def download_shopping_cart(request):
             'ingredient__name', 'ingredient__measurement_unit').annotate(
                 ingredient_sum=Sum('amount')
     )
-    print(data)
     shopping_cart = []
     for ingredient in data:
         name = ingredient['ingredient__name']
@@ -230,5 +194,5 @@ def download_shopping_cart(request):
         shopping_cart.append(
             f'- {name} в количестве {amount} {measurement_unit}\n')
     response = HttpResponse(shopping_cart, content_type='text/plain')
-    response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+    response['Content-Disposition'] = 'attachment;filename="shopping_list.txt"'
     return response

@@ -2,6 +2,7 @@ from django_filters import rest_framework as filter
 
 from recipes.models import Ingredient, Recipe
 
+
 class IngredientsFilter(filter.FilterSet):
 
     name = filter.CharFilter(
@@ -12,6 +13,7 @@ class IngredientsFilter(filter.FilterSet):
     class Meta:
         model = Ingredient
         fields = ('name',)
+
 
 class RecipeFilter(filter.FilterSet):
     author = filter.NumberFilter(
@@ -30,14 +32,18 @@ class RecipeFilter(filter.FilterSet):
 
     def get_is_favorited(self, queryset, name, value):
         if value:
-            return queryset.filter(favourites__user_id=self.request.user.id)
+            return queryset.filter(
+                favourites__user_id=self.request.user.id
+            )
         return queryset
-    
+
     def get_is_in_shopping_cart(self, queryset, name, value):
         if value:
-            return queryset.filter(shopping_carts__user_id=self.request.user.id)
+            return queryset.filter(
+                shopping_carts__user_id=self.request.user.id
+            )
         return queryset
-    
+
     class Meta:
         model = Recipe
-        fields = ('author','tags', 'is_favorited', 'is_in_shopping_cart')
+        fields = ('author', 'tags', 'is_favorited', 'is_in_shopping_cart')
