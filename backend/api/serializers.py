@@ -6,8 +6,8 @@ from rest_framework import serializers, validators
 from recipes.models import (MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH,
                             MAX_RECIPE_NAME_LENGTH, MAX_USERNAME_LENGTH,
                             MIN_COOKING_TIME, Favourite, FoodgramUser,
-                            Ingredient, Recipe, RecipeIngredient, ShoppingCart,
-                            Subscription, Tag)
+                            Ingredient, Recipe, RecipeIngredient, RecipeShortURL, 
+                            ShoppingCart,Subscription, Tag)
 from recipes.validators import validate_username
 
 
@@ -342,6 +342,13 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return RecipeReadSerializer().to_representation(instance)
+
+
+class RecipeShortURLSerializer(serializers.Serializer):
+    def validate(self, data):
+        print(data)
+        return data
+    
 
 
 class FavouriteSerializer(serializers.ModelSerializer):

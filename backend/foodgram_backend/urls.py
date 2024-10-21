@@ -3,8 +3,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from api import utils
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('<str:short_url>', utils.redirection),
     path('api/', include('api.urls')),
 ]
 

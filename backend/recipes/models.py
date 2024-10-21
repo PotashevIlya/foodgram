@@ -209,6 +209,26 @@ class RecipeIngredient(models.Model):
         return f'{self.ingredient} в {self.recipe}'
 
 
+class RecipeShortURL(models.Model):
+    recipe = models.OneToOneField(Recipe, on_delete=models.CASCADE, verbose_name='Рецепт')
+    short_url = models.CharField(max_length=10, unique=True, verbose_name='Короткая ссылка')
+    full_url = models.URLField(verbose_name='Полная ссылка', null=False)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('recipe', 'short_url'),
+                name='unique_recipe_short_url'
+            )
+        ]
+        verbose_name = 'Короткая ссылка'
+        verbose_name_plural = 'Короткие ссылки'
+        default_related_name = 'short_links'
+    
+    def __str__(self):
+        return f'Короткая ссылка для рецепта {self.recipe} - {self.short_url}.'
+
+
 class UserRecipeBaseModel(models.Model):
     user = models.ForeignKey(
         FoodgramUser, on_delete=models.CASCADE, verbose_name='Пользователь')

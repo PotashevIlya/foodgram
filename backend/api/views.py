@@ -1,5 +1,7 @@
+import random
 from http import HTTPStatus
 
+from django.conf import settings
 from django.db.models import Sum
 from django.shortcuts import HttpResponse, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -10,7 +12,8 @@ from rest_framework.permissions import (AllowAny, IsAuthenticated,
 from rest_framework.response import Response
 
 from recipes.models import (Favourite, FoodgramUser, Ingredient, Recipe,
-                            RecipeIngredient, ShoppingCart, Subscription, Tag)
+                            RecipeIngredient, RecipeShortURL, ShoppingCart,
+                            Subscription, Tag)
 
 from .filters import IngredientsFilter, RecipeFilter
 from .pagination import CustomPagination
@@ -156,7 +159,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
 @permission_classes((AllowAny,))
 def get_short_url(request, id):
     recipe = get_object_or_404(Recipe, id=id)
-    url = request.build_absolute_uri().replace('get-link/', '')
+    if RecipeShortURL.objects.filter(recipe=recipe).exists():
+        short_url = RecipeShortURL.objects.get(recipe=recipe).short_url
+        url = request.build_absolute_uri().replace(
+            f'api/recipes/{id}/get-link/', f'{short_url}'
+        )
+        return Response({'short-link': url})
+    short_url = ''
+    full_url = request.build_absolute_uri().replace('get-link/', '')
+    while True:
+        short_url = ''.join(random.choices(
+            settings.CHARACTERS_FOR_SHORT_LINK,
+            k=settings.SHORT_LINK_LENGTH
+        )
+        )
+        if not RecipeShortURL.objects.filter(
+            short_url=short_url
+        ).exists():
+            RecipeShortURL.objects.create(recipe=recipe,
+                                          short_url=short_url,
+                                          full_url=full_url
+                                          )
+            break
+    url = request.build_absolute_uri().replace(
+        f'api/recipes/{id}/get-link/', f'{short_url}'
+    )
     return Response({'short-link': url})
 
 
