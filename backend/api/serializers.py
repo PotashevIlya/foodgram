@@ -317,23 +317,17 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        instance.image = validated_data.get('image', instance.image)
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get(
-            'cooking_time',
-            instance.cooking_time
-        )
         tags = validated_data.pop('tags')
-        ingredients = validated_data.get('ingredients', instance.ingredients)
         instance.tags.clear()
         instance.tags.set(tags)
-        instance.ingredients.clear()
+        ingredients = validated_data.pop('ingredients')
+        RecipeIngredient.objects.filter(recipe=instance).delete()
+        super().update(instance, validated_data)
         for ingredient in ingredients:
             ingredient_id = ingredient.pop('id')
             ingredient_amount = ingredient.pop('amount')
             current_ingredient = Ingredient.objects.get(id=ingredient_id)
-            RecipeIngredient.objects.get_or_create(
+            RecipeIngredient.objects.create(
                 recipe=instance,
                 ingredient=current_ingredient,
                 amount=ingredient_amount
