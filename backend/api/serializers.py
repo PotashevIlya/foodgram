@@ -328,10 +328,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             ingredient_amount = ingredient.pop('amount')
             current_ingredient = Ingredient.objects.get(id=ingredient_id)
             RecipeIngredient.objects.create(
-                    recipe=instance,
-                    ingredient=current_ingredient,
-                    amount=ingredient_amount
-                )
+                recipe=instance,
+                ingredient=current_ingredient,
+                amount=ingredient_amount
+            )
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):
