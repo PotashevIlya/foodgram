@@ -31,11 +31,15 @@ router.register(
 
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
-    path('users/subscriptions/',MySubscriptionsViewSet.as_view({'get': 'list'})),
-    path('users/<int:id>/subscribe/', SubscribtionManagerView.as_view(), name='subscribe'),
+    path('users/subscriptions/',
+         MySubscriptionsViewSet.as_view({'get': 'list'})),
+    path('users/<int:id>/subscribe/',
+         SubscribtionManagerView.as_view(), name='subscribe'),
     path('recipes/<int:id>/get-link/', get_short_url),
     path('recipes/<int:id>/favorite/', manage_favourite, name='favourite'),
-    path('recipes/<int:id>/shopping_cart/', manage_shopping_cart, name='shopping_cart'),
-    path('recipes/download_shopping_cart/', download_shopping_cart, name='download_shopping_cart'),
+    path('recipes/<int:id>/shopping_cart/',
+         manage_shopping_cart, name='shopping_cart'),
+    path('recipes/download_shopping_cart/',
+         download_shopping_cart, name='download_shopping_cart'),
     path('', include(router.urls)),
 ]
