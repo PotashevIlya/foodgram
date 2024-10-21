@@ -288,7 +288,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 )
             initial_tags.append(tag)
         return tags
-    
+
     def validate(self, data):
         if 'ingredients' not in data:
             raise serializers.ValidationError(
@@ -320,7 +320,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         instance.image = validated_data.get('image', instance.image)
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get('cooking_time', instance.cooking_time)
+        instance.cooking_time = validated_data.get(
+            'cooking_time',
+            instance.cooking_time
+        )
         tags = validated_data.pop('tags')
         ingredients = validated_data.get('ingredients', instance.ingredients)
         instance.tags.clear()
