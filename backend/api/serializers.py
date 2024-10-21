@@ -317,22 +317,41 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             )
         return recipe
 
+    # def update(self, instance, validated_data):
+    #     tags = validated_data.pop('tags')
+    #     ingredients = validated_data.pop('ingredients')
+    #     instance.tags.clear()
+    #     instance.tags.set(tags)
+    #     instance.ingredients.clear()
+    #     for ingredient in ingredients:
+    #         ingredient_id = ingredient.pop('id')
+    #         ingredient_amount = ingredient.pop('amount')
+    #         current_ingredient = Ingredient.objects.get(id=ingredient_id)
+    #         RecipeIngredient.objects.create(
+    #             recipe=instance,
+    #             ingredient=current_ingredient,
+    #             amount=ingredient_amount
+    #         )
+    #     return super().update(instance, validated_data)
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
         instance.tags.clear()
         instance.tags.set(tags)
-        instance.ingredients.clear()
+        lst = []
         for ingredient in ingredients:
             ingredient_id = ingredient.pop('id')
             ingredient_amount = ingredient.pop('amount')
             current_ingredient = Ingredient.objects.get(id=ingredient_id)
-            RecipeIngredient.objects.create(
+            current_ingredients, _ = RecipeIngredient.objects.get_or_create(
                 recipe=instance,
                 ingredient=current_ingredient,
                 amount=ingredient_amount
             )
-        return super().update(instance, validated_data)
+            lst.append(current_ingredients)
+        instance.ingredients.set(lst)
+        instance.save()
+        return instance
 
 
     def to_representation(self, instance):
