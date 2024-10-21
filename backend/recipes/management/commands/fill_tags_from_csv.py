@@ -12,8 +12,8 @@ class Command(BaseCommand):
         ) as csvfile:
             reader = DictReader(csvfile)
             for row in reader:
-                ingredient = Tag(
+                tag = Tag(
                     name=row['name'],
                     slug=row['slug']
                 )
-                ingredient.save()
+                tag.save()
