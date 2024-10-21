@@ -324,15 +324,16 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('ingredients')
         RecipeIngredient.objects.filter(recipe=instance).delete()
         super().update(instance, validated_data)
-        for ingredient in ingredients:
-            ingredient_id = ingredient.pop('id')
-            ingredient_amount = ingredient.pop('amount')
-            current_ingredient = Ingredient.objects.get(id=ingredient_id)
-            RecipeIngredient.objects.create(
-                recipe=instance,
-                ingredient=current_ingredient,
-                amount=ingredient_amount
-            )
+        if 'ingredient' in validated_data:
+            for ingredient in ingredients:
+                ingredient_id = ingredient.pop('id')
+                ingredient_amount = ingredient.pop('amount')
+                current_ingredient = Ingredient.objects.get(id=ingredient_id)
+                RecipeIngredient.objects.create(
+                    recipe=instance,
+                    ingredient=current_ingredient,
+                    amount=ingredient_amount
+                )
         instance.save()
         return instance
 
