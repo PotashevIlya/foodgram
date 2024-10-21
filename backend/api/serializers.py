@@ -328,6 +328,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         ingredients = validated_data.get('ingredients', instance.ingredients)
         instance.tags.clear()
         instance.tags.set(tags)
+        instance.ingredients.clear()
         for ingredient in ingredients:
             ingredient_id = ingredient.pop('id')
             ingredient_amount = ingredient.pop('amount')
