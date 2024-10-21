@@ -334,6 +334,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             )
         return super().update(instance, validated_data)
 
+
     def to_representation(self, instance):
         return RecipeReadSerializer().to_representation(instance)
 
