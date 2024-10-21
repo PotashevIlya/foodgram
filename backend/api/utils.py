@@ -1,9 +1,8 @@
 from http import HTTPStatus
 
 from django.shortcuts import get_object_or_404, redirect
-from rest_framework.response import Response
-
 from recipes.models import FoodgramUser, Recipe, RecipeShortURL
+from rest_framework.response import Response
 
 
 def create_object(request, id, serializer):
