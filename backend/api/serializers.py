@@ -326,7 +326,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('recipeingredients')
         instance.tags.clear()
         instance.tags.set(tags)
-        instance.ingredients.clear()
+        if ingredients is not None:
+            instance.ingredients.clear()
         for ingredient in ingredients:
             ingredient_id = ingredient.pop('id')
             ingredient_amount = ingredient.pop('amount')
