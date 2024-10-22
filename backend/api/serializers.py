@@ -323,6 +323,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('recipeingredients')
         i = validated_data.pop('ingredients')
+        print(i)
         instance.tags.clear()
         instance.tags.set(tags)
         for ingredient in ingredients:
