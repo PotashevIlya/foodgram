@@ -320,10 +320,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
+        print(validated_data)
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('recipeingredients')
-        i = validated_data.pop('ingredients')
-        print(i)
         instance.tags.clear()
         instance.tags.set(tags)
         for ingredient in ingredients:
