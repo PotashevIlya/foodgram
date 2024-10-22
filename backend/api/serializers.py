@@ -235,7 +235,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     ingredients = RecipeIngredientWriteSerializer(
         many=True, source='recipeingredients'
-        )
+    )
     name = serializers.CharField(max_length=MAX_RECIPE_NAME_LENGTH)
     cooking_time = serializers.IntegerField(
         min_value=MIN_COOKING_TIME,
@@ -335,7 +335,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 amount=ingredient_amount
             )
         return super().update(instance, validated_data)
-
 
     def to_representation(self, instance):
         return RecipeReadSerializer().to_representation(instance)
