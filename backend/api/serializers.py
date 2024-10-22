@@ -322,9 +322,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('recipeingredients')
+        i = validated_data.pop('ingredients')
         instance.tags.clear()
         instance.tags.set(tags)
-        instance.ingredients.clear()
         for ingredient in ingredients:
             ingredient_id = ingredient.pop('id')
             ingredient_amount = ingredient.pop('amount')
@@ -334,7 +334,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 ingredient=current_ingredient,
                 amount=ingredient_amount
             )
-        return super().update(instance, validated_data)
+        instance.save()
+        return instance
 
     def to_representation(self, instance):
         return RecipeReadSerializer().to_representation(instance)
