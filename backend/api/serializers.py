@@ -9,6 +9,8 @@ from recipes.models import (MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH,
 from recipes.validators import validate_username
 from rest_framework import serializers, validators
 
+from .utils import create_ingredients_in_recipe
+
 
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
@@ -309,15 +311,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)
-        for ingredient in ingredients:
-            ingredient_id = ingredient.pop('id')
-            ingredient_amount = ingredient.pop('amount')
-            current_ingredient = Ingredient.objects.get(id=ingredient_id)
-            RecipeIngredient.objects.create(
-                recipe=recipe,
-                ingredient=current_ingredient,
-                amount=ingredient_amount
-            )
+        create_ingredients_in_recipe(recipe, ingredients)
         return recipe
 
     def update(self, instance, validated_data):
@@ -326,15 +320,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         instance.tags.clear()
         instance.tags.set(tags)
         RecipeIngredient.objects.filter(recipe=instance).delete()
-        for ingredient in ingredients:
-            ingredient_id = ingredient.pop('id')
-            ingredient_amount = ingredient.pop('amount')
-            current_ingredient = Ingredient.objects.get(id=ingredient_id)
-            RecipeIngredient.objects.create(
-                recipe=instance,
-                ingredient=current_ingredient,
-                amount=ingredient_amount
-            )
+        create_ingredients_in_recipe(instance, ingredients)
         instance.save()
         return instance
 

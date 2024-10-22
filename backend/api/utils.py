@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 from django.shortcuts import get_object_or_404, redirect
-from recipes.models import FoodgramUser, Recipe, RecipeShortURL
+from recipes.models import FoodgramUser, Ingredient, Recipe, RecipeIngredient, RecipeShortURL
 from rest_framework.response import Response
 
 
@@ -26,6 +26,18 @@ def delete_object(request, id, model, model_name):
         {'error': f'Этого рецепта не было в {model_name}'},
         status=HTTPStatus.BAD_REQUEST
     )
+
+
+def create_ingredients_in_recipe(recipe, ingredients):
+    for ingredient in ingredients:
+        ingredient_id = ingredient.pop('id')
+        ingredient_amount = ingredient.pop('amount')
+        current_ingredient = Ingredient.objects.get(id=ingredient_id)
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=current_ingredient,
+            amount=ingredient_amount
+        )
 
 
 def get_full_url(short_url):
