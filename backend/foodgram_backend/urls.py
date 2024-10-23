@@ -6,7 +6,7 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('<str:short_url>', utils.redirection),
+    path('api/<str:short_url>', utils.redirection),
     path('api/', include('api.urls')),
 ]
 
