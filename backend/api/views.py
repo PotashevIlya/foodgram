@@ -174,7 +174,6 @@ def get_short_url(request, id):
             k=settings.SHORT_LINK_LENGTH
         )
         )
-        short_url = 's/' + short_url
         if not RecipeShortURL.objects.filter(
             short_url=short_url
         ).exists():

@@ -42,11 +42,6 @@ def create_ingredients_in_recipe(recipe, ingredients):
         )
 
 
-def get_full_url(short_url):
-    recipe = get_object_or_404(RecipeShortURL, short_url=short_url)
-    return recipe.full_url
-
-
 def redirection(request, short_url):
-    full_url = get_full_url(short_url)
-    return redirect(full_url)
+    obj = get_object_or_404(RecipeShortURL, short_url=short_url)
+    return redirect(obj.full_url)
