@@ -166,7 +166,7 @@ def get_short_url(request, id):
         )
         return Response({'short-link': url})
     short_url = ''
-    full_url = request.build_absolute_uri().replace('get-link/', '')
+    full_url = request.build_absolute_uri().replace('/get-link/', '')
     full_url = full_url.replace('api/', '')
     while True:
         short_url = ''.join(random.choices(
