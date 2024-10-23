@@ -52,7 +52,7 @@ def get_full_url(short_url):
     return recipe.full_url
 
 
-def redirection(short_url):
+def redirection(request, short_url):
     try:
         full_url = get_full_url(short_url)
         return redirect(full_url)
