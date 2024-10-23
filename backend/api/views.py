@@ -162,7 +162,7 @@ def get_short_url(request, id):
     if RecipeShortURL.objects.filter(recipe=recipe).exists():
         short_url = RecipeShortURL.objects.get(recipe=recipe).short_url
         url = request.build_absolute_uri().replace(
-            f'api/recipes/{id}/get-link/', f'{short_url}'
+            f'api/recipes/{id}/get-link/', f's/{short_url}'
         )
         return Response({'short-link': url})
     short_url = ''
@@ -183,7 +183,7 @@ def get_short_url(request, id):
                                           )
             break
     url = request.build_absolute_uri().replace(
-        f'api/recipes/{id}/get-link/', f'{short_url}'
+        f'api/recipes/{id}/get-link/', f's/{short_url}'
     )
     return Response({'short-link': url})
 
