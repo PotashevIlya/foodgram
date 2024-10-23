@@ -80,6 +80,7 @@ python manage.py fill_ingredients_from_csv
 ```
 ```
 python manage.py fill_tags_from_csv
+```
 8. Создать суперпользователя (опционально)
 ```
 python manage.py createsuperuser
