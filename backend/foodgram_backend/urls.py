@@ -3,12 +3,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from api import utils
+from api.utils import redirection
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
-    path('<str:short_url>', utils.redirection),
+    path('<str:short_url>', redirection),
 ]
 
 

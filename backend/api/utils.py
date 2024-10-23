@@ -43,18 +43,10 @@ def create_ingredients_in_recipe(recipe, ingredients):
 
 
 def get_full_url(short_url):
-    try:
-        recipe = get_object_or_404(RecipeShortURL, short_url=short_url)
-    except RecipeShortURL.DoesNotExist:
-        raise ValueError(
-            'Рецепт не существует'
-        )
+    recipe = get_object_or_404(RecipeShortURL, short_url=short_url)
     return recipe.full_url
 
 
 def redirection(request, short_url):
-    try:
-        full_url = get_full_url(short_url)
-        return redirect(full_url)
-    except Exception as e:
-        return Response({'errors': e})
+    full_url = get_full_url(short_url)
+    return redirect(full_url)
