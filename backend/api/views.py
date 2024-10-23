@@ -166,12 +166,14 @@ def get_short_url(request, id):
         return Response({'short-link': url})
     short_url = ''
     full_url = request.build_absolute_uri().replace('get-link/', '')
+    full_url = full_url.replace('api/', '')
     while True:
         short_url = ''.join(random.choices(
             settings.CHARACTERS_FOR_SHORT_LINK,
             k=settings.SHORT_LINK_LENGTH
         )
         )
+        short_url = 's/' + short_url
         if not RecipeShortURL.objects.filter(
             short_url=short_url
         ).exists():

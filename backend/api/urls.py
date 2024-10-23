@@ -6,6 +6,7 @@ from .views import (FoodgramUserViewSet, IngredientViewSet,
                     SubscribtionManagerView, TagViewSet,
                     download_shopping_cart, get_short_url, manage_favourite,
                     manage_shopping_cart)
+from .utils import redirection
 
 router = DefaultRouter()
 router.register(
@@ -41,5 +42,6 @@ urlpatterns = [
          manage_shopping_cart, name='shopping_cart'),
     path('recipes/download_shopping_cart/',
          download_shopping_cart, name='download_shopping_cart'),
+    path('<str:short_url>', redirection),
     path('', include(router.urls)),
 ]
