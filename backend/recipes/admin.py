@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
 from .models import (Favourite, FoodgramUser, Ingredient, Recipe,
-                     RecipeIngredient, RecipeShortURL, ShoppingCart,
+                     RecipeIngredient, ShoppingCart,
                      Subscription, Tag)
 
 
@@ -41,4 +41,3 @@ admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(RecipeIngredient)
 admin.site.register(Favourite)
 admin.site.register(ShoppingCart)
-admin.site.register(RecipeShortURL)

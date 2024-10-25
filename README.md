@@ -22,12 +22,12 @@ docker compose -f docker-compose.production.yml up
 ```
 sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
 ```
-5. Предзаполнить базу данных из csv-файлов - последовательно выполнить команды
+5. Предзаполнить базу данных из csv или json файлов - последовательно выполнить команды
 ```
-sudo docker compose -f docker-compose.production.yml exec backend python manage.py fill_ingredients_from_csv
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py fill_ingredients_from_csv/json
 ```
 ```
-sudo docker compose -f docker-compose.production.yml exec backend python manage.py fill_tags_from_csv
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py fill_tags_from_csv/json
 ```
 6. Собрать статику бекэнда
 ```
@@ -74,12 +74,12 @@ pip install -r requirements.txt
 ```
 python manage.py migrate
 ```
-7. Предзаполнить базу данных из csv-файлов - последовательно выполнить команды
+7. Предзаполнить базу данных из csv или json файлов - последовательно выполнить команды
 ```
-python manage.py fill_ingredients_from_csv
+python manage.py fill_ingredients_from_csv/json
 ```
 ```
-python manage.py fill_tags_from_csv
+python manage.py fill_tags_from_csv/json
 ```
 8. Создать суперпользователя (опционально)
 ```
@@ -90,45 +90,10 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 ## Доступные эндпоинты API:
-- /api/users/ Get-запрос – получение списка пользователей. POST-запрос – регистрация нового пользователя. Доступно без токена.
-
-- /api/users/{id} GET-запрос – персональная страница пользователя с указанным id (доступно без токена).
-
-- /api/users/me/ GET-запрос – страница текущего пользователя. PATCH-запрос – редактирование собственной страницы. Доступно авторизированным пользователям.
-
-- /api/users/set_password POST-запрос – изменение собственного пароля. Доступно авторизированным пользователям.
-
-- /api/auth/token/login/ POST-запрос – получение токена. 
-
-- /api/auth/token/logout/ POST-запрос – удаление токена.
-
-- /api/tags/ GET-запрос — получение списка всех тегов. Доступно без токена.
-
-- /api/tags/{id} GET-запрос — получение информации о теге о его id. Доступно без токена.
-
-- /api/ingredients/ GET-запрос – получение списка всех ингредиентов. Подключён поиск по частичному вхождению в начале названия ингредиента. Доступно без токена.
-
-- /api/ingredients/{id}/ GET-запрос — получение информации об ингредиенте по его id. Доступно без токена.
-
-- /api/recipes/ GET-запрос – получение списка всех рецептов. Возможен поиск рецептов по тегам и по имени автора (доступно без токена). POST-запрос – добавление нового рецепта (доступно для авторизированных пользователей).
-
-- /api/recipes/{id}/ GET-запрос – получение информации о рецепте по его id (доступно без токена). PATCH-запрос – изменение собственного рецепта (доступно для автора рецепта). DELETE-запрос – удаление собственного рецепта (доступно для автора рецепта).
-
-- /api/recipes/{id}/favorite/ POST-запрос – добавление нового рецепта в избранное. DELETE-запрос – удаление рецепта из избранного. Доступно для авторизированных пользователей.
-
-- /api/recipes/{id}/shopping_cart/ POST-запрос – добавление нового рецепта в список покупок. DELETE-запрос – удаление рецепта из списка покупок. Доступно для авторизированных пользователей.
-
-- /api/recipes/download_shopping_cart/ GET-запрос – получение текстового файла со списком покупок. Доступно для авторизированных пользователей.
-
-- /api/users/{id}/subscribe/ GET-запрос – подписка на пользователя с указанным id. POST-запрос – отписка от пользователя с указанным id. Доступно для авторизированных пользователей
-
-- /api/users/subscriptions/ GET-запрос – получение списка всех пользователей, на которых подписан текущий пользователь Доступно для авторизированных пользователей.
-
-Более подробно со спецификацией можно будет ознакомиться по ссылке /redoc/ после запуска проекта в контейнерах.
-
+- Документация со всеми эндпоинтами будет доступна по ссылке https://<ваш домен или IP>/redoc/ после запуска проекта в контейнерах. 
 ___
 ### Стек :bulb:
-Django, Gunicorn, nginx, Rest API (DRF), PostgreSQL, Docker, CI/CD (GitHub Actions), React, Yandex Cloud.
+Python, Django, Gunicorn, nginx, Rest API (DRF), PostgreSQL, Docker, CI/CD (GitHub Actions), React, Yandex Cloud.
 ___  
 #### Автор проекта:    
 :small_orange_diamond: [Поташев Илья](https://github.com/PotashevIlya)  

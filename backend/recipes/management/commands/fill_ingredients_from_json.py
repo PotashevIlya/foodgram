@@ -1,9 +1,9 @@
 from django.core.management.base import BaseCommand
 
 from .utils import import_objects
-from ...models import Tag
+from ...models import Ingredient
 
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        import_objects('tags', 'csv', Tag)
+        import_objects('ingredients', 'json', Ingredient)

@@ -6,4 +6,4 @@ from ...models import Tag
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        import_objects('tags', 'csv', Tag)
+        import_objects('tags', 'json', Tag)
