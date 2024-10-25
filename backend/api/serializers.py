@@ -1,6 +1,4 @@
-import base64
-
-from django.core.files.base import ContentFile
+from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers, validators
 
 from recipes.models import (MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH,
@@ -13,13 +11,8 @@ from recipes.validators import validate_username
 from .utils import create_ingredients_in_recipe
 
 
-class Base64ImageField(serializers.ImageField):
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
-        return super().to_internal_value(data)
+class NeverEmptyBase64ImageField(Base64ImageField):
+    EMPTY_VALUES = ()
 
 
 class FoodgramUserCreateSerializer(serializers.ModelSerializer):
@@ -79,7 +72,7 @@ class FoodgramUserReadSerializer(serializers.ModelSerializer):
 
 
 class AvatarSerializer(serializers.Serializer):
-    avatar = Base64ImageField(required=True)
+    avatar = NeverEmptyBase64ImageField()
     avatar_url = serializers.SerializerMethodField(
         'get_avatar_url',
         read_only=True
@@ -236,7 +229,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Tag.objects.all())
     author = serializers.PrimaryKeyRelatedField(read_only=True)
-    image = Base64ImageField()
+    image = NeverEmptyBase64ImageField()
     ingredients = RecipeIngredientWriteSerializer(
         many=True, source='recipeingredients'
     )

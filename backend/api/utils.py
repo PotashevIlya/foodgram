@@ -3,7 +3,7 @@ from http import HTTPStatus
 from django.shortcuts import get_object_or_404, redirect
 from rest_framework.response import Response
 
-from recipes.models import (FoodgramUser, Ingredient, Recipe, RecipeIngredient)
+from recipes.models import FoodgramUser, Ingredient, Recipe, RecipeIngredient
 
 
 def create_object(request, id, serializer):

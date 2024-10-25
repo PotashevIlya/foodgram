@@ -12,8 +12,7 @@ from rest_framework.permissions import (AllowAny, IsAuthenticated,
 from rest_framework.response import Response
 
 from recipes.models import (Favourite, FoodgramUser, Ingredient, Recipe,
-                            RecipeIngredient, ShoppingCart,
-                            Subscription, Tag)
+                            RecipeIngredient, ShoppingCart, Subscription, Tag)
 
 from .filters import IngredientsFilter, RecipeFilter
 from .pagination import PageLimitPagination
