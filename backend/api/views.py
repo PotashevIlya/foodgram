@@ -92,13 +92,13 @@ class MySubscriptionsViewSet(viewsets.GenericViewSet,
 
     def get_queryset(self):
         return FoodgramUser.objects.filter(
-            following__subscriber=self.request.user)
+            authors__subscriber=self.request.user)
 
 
 class SubscribtionManagerView(views.APIView):
     def post(self, request, id):
-        following = get_object_or_404(FoodgramUser, id=id)
-        data = dict(subscriber=request.user.id, following=following.id)
+        author = get_object_or_404(FoodgramUser, id=id)
+        data = dict(subscriber=request.user.id, author=author.id)
         serializer = SubscriptionWriteSerializer(
             data=data, context={'request': request})
         if serializer.is_valid(raise_exception=True):
@@ -107,10 +107,10 @@ class SubscribtionManagerView(views.APIView):
         return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
 
     def delete(self, request, id):
-        following = get_object_or_404(FoodgramUser, id=id)
+        author = get_object_or_404(FoodgramUser, id=id)
         subscriber = FoodgramUser.objects.get(id=request.user.id)
         instance = Subscription.objects.filter(
-            following=following, subscriber=subscriber)
+            author=author, subscriber=subscriber)
         if instance.exists():
             instance.delete()
             return Response(status=HTTPStatus.NO_CONTENT)
@@ -210,7 +210,7 @@ def manage_shopping_cart(request, id):
 @permission_classes((IsAuthenticated,))
 def download_shopping_cart(request):
     data = RecipeIngredient.objects.filter(
-        recipe__shopping_carts__user_id=request.user.id).values(
+        recipe__shoppingcart_recipes__user_id=request.user.id).values(
             'ingredient__name', 'ingredient__measurement_unit').annotate(
                 ingredient_sum=Sum('amount')
     )

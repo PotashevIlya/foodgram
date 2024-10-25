@@ -70,7 +70,7 @@ class FoodgramUserReadSerializer(serializers.ModelSerializer):
             return data
         if Subscription.objects.filter(
             subscriber_id=self.context['request'].user.id,
-            following_id=instance.id
+            author_id=instance.id
         ).exists():
             data['is_subscribed'] = True
             return data
@@ -135,21 +135,21 @@ class SubscriptionReadSerializer(serializers.ModelSerializer):
 class SubscriptionWriteSerializer(serializers.ModelSerializer):
     subscriber = serializers.PrimaryKeyRelatedField(
         queryset=FoodgramUser.objects.all())
-    following = serializers.PrimaryKeyRelatedField(
+    author = serializers.PrimaryKeyRelatedField(
         queryset=FoodgramUser.objects.all())
 
     class Meta:
         model = Subscription
-        fields = ('subscriber', 'following')
+        fields = ('subscriber', 'author')
         validators = (validators.UniqueTogetherValidator(
             queryset=Subscription.objects.all(),
-            fields=('subscriber', 'following'),
+            fields=('subscriber', 'author'),
             message=('Вы уже подписаны на этого пользователя')
         ),
         )
 
     def validate(self, data):
-        if data['subscriber'] == data['following']:
+        if data['subscriber'] == data['author']:
             raise serializers.ValidationError(
                 'Нельзя подписаться на себя самого'
             )
@@ -157,7 +157,7 @@ class SubscriptionWriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return SubscriptionReadSerializer(
-            instance.following,
+            instance.author,
             context={'request': self.context['request']}
         ).data
 
