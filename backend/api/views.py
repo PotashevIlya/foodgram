@@ -5,39 +5,41 @@ from django.conf import settings
 from django.db.models import Sum
 from django.shortcuts import HttpResponse, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from djoser.views import UserViewSet
 from rest_framework import permissions, views, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.permissions import (AllowAny, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
+from rest_framework.permissions import (
+    AllowAny, IsAuthenticated,
+    IsAuthenticatedOrReadOnly
+)
 from rest_framework.response import Response
 
-from recipes.models import (Favourite, FoodgramUser, Ingredient, Recipe,
-                            RecipeIngredient, ShoppingCart, Subscription, Tag)
+from recipes.models import (
+    Favourite, FoodgramUser, Ingredient, Recipe,
+    RecipeIngredient, ShoppingCart, Subscription, Tag
+)
 
 from .filters import IngredientsFilter, RecipeFilter
 from .pagination import PageLimitPagination
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (AvatarSerializer, ChangePasswordSerializer,
-                          FavouriteSerializer, FoodgramUserCreateSerializer,
-                          FoodgramUserReadSerializer, IngredientSerializer,
-                          RecipeReadSerializer, RecipeWriteSerializer,
-                          ShoppingCartSerializer, SubscriptionReadSerializer,
-                          SubscriptionWriteSerializer, TagSerializer)
+from .serializers import (
+    AvatarSerializer,
+    FavouriteSerializer, IngredientSerializer,
+    RecipeReadSerializer, RecipeWriteSerializer,
+    ShoppingCartSerializer, SubscriptionReadSerializer,
+    SubscriptionWriteSerializer, TagSerializer
+)
 from .utils import create_object, delete_object
 
 
-class FoodgramUserViewSet(viewsets.GenericViewSet,
-                          viewsets.mixins.ListModelMixin,
-                          viewsets.mixins.CreateModelMixin,
-                          viewsets.mixins.RetrieveModelMixin):
+class FoodgramUserViewSet(UserViewSet):
     queryset = FoodgramUser.objects.all()
-    permission_classes = (AllowAny,)
     pagination_class = PageLimitPagination
 
-    def get_serializer_class(self):
-        if self.request.method in permissions.SAFE_METHODS:
-            return FoodgramUserReadSerializer
-        return FoodgramUserCreateSerializer
+    def get_permissions(self):
+        if self.action == 'me':
+            self.permission_classes = (IsAuthenticated,)
+        return super().get_permissions()
 
     @action(
         detail=False,
@@ -50,38 +52,13 @@ class FoodgramUserViewSet(viewsets.GenericViewSet,
             serializer = AvatarSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             avatar = serializer.validated_data['avatar']
-            user = FoodgramUser.objects.get(id=request.user.id)
+            user = request.user
             user.avatar = avatar
             user.save()
-            url = serializer.get_avatar_url(user)
-            return Response({'avatar': url}, status=HTTPStatus.OK)
+            return Response({'avatar': user.avatar.url}, status=HTTPStatus.OK)
         user = FoodgramUser.objects.get(id=request.user.id)
         user.avatar.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
-
-    @action(
-        detail=False,
-        permission_classes=(IsAuthenticated,)
-    )
-    def me(self, request):
-        serializer = FoodgramUserReadSerializer(request.user)
-        return Response(serializer.data, status=HTTPStatus.OK)
-
-    @action(
-        detail=False,
-        permission_classes=(IsAuthenticated,),
-        methods=('POST',)
-    )
-    def set_password(self, request):
-        request.data['user'] = FoodgramUser.objects.get(id=request.user.id)
-        serializer = ChangePasswordSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            current_user = FoodgramUser.objects.get(id=request.user.id)
-            current_user.set_password(
-                serializer.validated_data['new_password'])
-            current_user.save()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
 
 
 class MySubscriptionsViewSet(viewsets.GenericViewSet,
