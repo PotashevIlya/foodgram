@@ -1,12 +1,12 @@
-import random
 from http import HTTPStatus
-
+import io
 from django.conf import settings
 from django.db.models import Sum
+from django.http import FileResponse
 from django.shortcuts import HttpResponse, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from rest_framework import generics, permissions, serializers, viewsets
+from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated,
@@ -29,7 +29,7 @@ from .serializers import (
     SubscriptionReadSerializer,
     TagSerializer
 )
-from .utils import create_object, delete_object
+from .utils import create_object, delete_object, generate_shopping_list
 
 
 class FoodgramUserViewSet(UserViewSet):
@@ -177,21 +177,26 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        permission_classes=(IsAuthenticated,)
+        permission_classes=(AllowAny,)
     )
     def download_shopping_cart(self, request):
-        recipes = RecipeIngredient.objects.filter(
-            recipe__shoppingcart_recipes__user_id=request.user.id).values(
-            'ingredient__name', 'ingredient__measurement_unit').annotate(
-                ingredient_sum=Sum('amount')
+        ingredients_in_shopcart = RecipeIngredient.objects.filter(
+            recipe__shoppingcart_recipes__user_id=request.user.id
+        ).values(
+            'ingredient__name', 'ingredient__measurement_unit'
+        ).annotate(
+            ingredient_sum=Sum('amount')
         )
-        shopping_cart = []
-        for ingredient in recipes:
-            name = ingredient['ingredient__name']
-            measurement_unit = ingredient['ingredient__measurement_unit']
-            amount = ingredient['ingredient_sum']
-            shopping_cart.append(
-                f'- {name} в количестве {amount} {measurement_unit}\n')
-        response = HttpResponse(shopping_cart, content_type='text/plain')
-        response['Content-Disposition'] = 'attachment;filename="shopping_list.txt"'
-        return response
+        recipes_in_shopcart = ShoppingCart.objects.filter(
+            user=request.user
+        ).values(
+            'recipe__name'
+        )
+        return FileResponse(
+            generate_shopping_list(
+                ingredients_in_shopcart,
+                recipes_in_shopcart
+            ),
+            as_attachment=True,
+            filename='shopping_list.txt'
+        )

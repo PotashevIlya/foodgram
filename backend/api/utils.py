@@ -1,4 +1,6 @@
 from http import HTTPStatus
+import datetime
+import io
 
 from django.shortcuts import get_object_or_404, redirect
 from rest_framework.response import Response
@@ -32,15 +34,51 @@ def delete_object(user, recipe_id, model, model_name):
 
 
 def create_ingredients_in_recipe(recipe, ingredients):
+    ingredients_list = []
     for ingredient in ingredients:
         ingredient_id = ingredient.pop('id')
         ingredient_amount = ingredient.pop('amount')
         current_ingredient = Ingredient.objects.get(id=ingredient_id)
-        RecipeIngredient.objects.create(
-            recipe=recipe,
-            ingredient=current_ingredient,
-            amount=ingredient_amount
+        ingredients_list.append(
+            RecipeIngredient(
+                recipe=recipe,
+                ingredient=current_ingredient,
+                amount=ingredient_amount
+            )
         )
+        RecipeIngredient.objects.bulk_create(ingredients_list)
+
+def generate_shopping_list(products, recipes):
+    current_date = datetime.date.today().isoformat()
+    products_head = 'Продукты:'
+    recipes_head = 'Рецепты:'
+    products_in_shopcart = []
+    recipes_in_shopcart = []
+    for i, ingredient in enumerate(products):
+        name = ingredient['ingredient__name']
+        measurement_unit = ingredient['ingredient__measurement_unit']
+        amount = ingredient['ingredient_sum']
+        products_in_shopcart.append(
+            f'{i+1}.{name.title()} в количестве {amount} {measurement_unit}.'
+        )
+    for recipe in recipes:
+        name = recipe['recipe__name']
+        recipes_in_shopcart.append(
+            f'- {name.title()}'
+        )
+    result_content = '\n'.join(
+        [
+            current_date,
+            products_head,
+            *products_in_shopcart,
+            recipes_head,
+            *recipes_in_shopcart
+        ]
+    )
+    shopping_list = io.BytesIO()
+    shopping_list.write(bytes(result_content, encoding='utf-8'))
+    shopping_list.seek(0)
+    return shopping_list
 
 
 # def redirection(request, short_url):
