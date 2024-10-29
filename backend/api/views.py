@@ -6,7 +6,7 @@ from django.db.models import Sum
 from django.shortcuts import HttpResponse, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from rest_framework import permissions, views, viewsets
+from rest_framework import generics, permissions, serializers, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated,
@@ -27,7 +27,7 @@ from .serializers import (
     FavouriteSerializer, IngredientSerializer,
     RecipeReadSerializer, RecipeWriteSerializer,
     ShoppingCartSerializer, SubscriptionReadSerializer,
-    SubscriptionWriteSerializer, TagSerializer
+    TagSerializer
 )
 from .utils import create_object, delete_object
 
@@ -60,40 +60,55 @@ class FoodgramUserViewSet(UserViewSet):
         user.avatar.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
-
-class MySubscriptionsViewSet(viewsets.GenericViewSet,
-                             viewsets.mixins.ListModelMixin):
-    serializer_class = SubscriptionReadSerializer
-    pagination_class = PageLimitPagination
-
-    def get_queryset(self):
-        return FoodgramUser.objects.filter(
-            authors__subscriber=self.request.user)
-
-
-class SubscribtionManagerView(views.APIView):
-    def post(self, request, id):
-        author = get_object_or_404(FoodgramUser, id=id)
-        data = dict(subscriber=request.user.id, author=author.id)
-        serializer = SubscriptionWriteSerializer(
-            data=data, context={'request': request})
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data, status=HTTPStatus.CREATED)
-        return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
-
-    def delete(self, request, id):
-        author = get_object_or_404(FoodgramUser, id=id)
-        subscriber = FoodgramUser.objects.get(id=request.user.id)
-        instance = Subscription.objects.filter(
-            author=author, subscriber=subscriber)
-        if instance.exists():
-            instance.delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        return Response(
-            {'error': 'Вы не были подписаны на этого пользователя'},
-            status=HTTPStatus.BAD_REQUEST
+    @action(
+        detail=False,
+        methods=('POST', 'DELETE'),
+        url_path=r'(?P<id>\d+)/subscribe',
+        permission_classes=(IsAuthenticated,)
+    )
+    def manage_subscription(self, request, id):
+        data = dict(
+            subscriber=request.user,
+            author=get_object_or_404(FoodgramUser, id=id)
         )
+        if request.method == 'POST':
+            if data['subscriber'] == data['author']:
+                raise serializers.ValidationError(
+                    'Нельзя подписаться на себя самого'
+                )
+            if Subscription.objects.filter(**data).exists():
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого пользователя'
+                )
+            Subscription.objects.create(**data)
+            return Response(
+                SubscriptionReadSerializer(
+                    data['author'],
+                    context={'request': request},
+                ).data,
+                status=HTTPStatus.CREATED
+            )
+        subscription = Subscription.objects.filter(**data)
+        if not subscription.exists():
+            raise serializers.ValidationError(
+                'Вы не были подписаны на этого пользователя'
+            )
+        subscription.delete()
+        return Response(status=HTTPStatus.NO_CONTENT)
+
+    @action(
+        detail=False,
+        permission_classes=(IsAuthenticated,)
+    )
+    def subscriptions(self, request):
+        queryset = FoodgramUser.objects.filter(
+            authors__subscriber=request.user)
+        serializer = SubscriptionReadSerializer(
+            self.paginate_queryset(queryset),
+            context={'request': request},
+            many=True
+        )
+        return self.get_paginated_response(serializer.data)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

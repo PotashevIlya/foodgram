@@ -49,49 +49,24 @@ class SubscriptionReadSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.BooleanField(default=True)
 
     def get_recipes(self, obj):
-        context = self.context.get('request')
-        recipes_limit = context.query_params.get('recipes_limit')
-        if recipes_limit:
-            return RecipeBriefSerializer(
-                obj.recipes.all()[:int(recipes_limit)],
-                many=True
-            ).data
-        return RecipeBriefSerializer(obj.recipes.all(), many=True).data
+        return RecipeBriefSerializer(
+            obj.recipes.all()[:int(
+                self.context.get(
+                    'request'
+                ).query_params.get(
+                    'recipes_limit',
+                    10**10
+                )
+            )
+            ],
+            many=True
+        ).data
 
     class Meta:
         model = FoodgramUser
-        fields = ('email', 'id', 'username', 'first_name', 'last_name',
-                  'is_subscribed', 'avatar', 'recipes', 'recipes_count')
-
-
-class SubscriptionWriteSerializer(serializers.ModelSerializer):
-    subscriber = serializers.PrimaryKeyRelatedField(
-        queryset=FoodgramUser.objects.all())
-    author = serializers.PrimaryKeyRelatedField(
-        queryset=FoodgramUser.objects.all())
-
-    class Meta:
-        model = Subscription
-        fields = ('subscriber', 'author')
-        validators = (validators.UniqueTogetherValidator(
-            queryset=Subscription.objects.all(),
-            fields=('subscriber', 'author'),
-            message=('Вы уже подписаны на этого пользователя')
-        ),
+        fields = tuple(FoodgramUserReadSerializer().fields) + (
+            'recipes', 'recipes_count'
         )
-
-    def validate(self, data):
-        if data['subscriber'] == data['author']:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на себя самого'
-            )
-        return data
-
-    def to_representation(self, instance):
-        return SubscriptionReadSerializer(
-            instance.author,
-            context={'request': self.context['request']}
-        ).data
 
 
 class TagSerializer(serializers.ModelSerializer):
