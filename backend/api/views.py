@@ -24,9 +24,9 @@ from .pagination import PageLimitPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     AvatarSerializer,
-    FavouriteSerializer, IngredientSerializer,
+    IngredientSerializer, RecipeBriefSerializer,
     RecipeReadSerializer, RecipeWriteSerializer,
-    ShoppingCartSerializer, SubscriptionReadSerializer,
+    SubscriptionReadSerializer,
     TagSerializer
 )
 from .utils import create_object, delete_object
@@ -137,81 +137,61 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def perform_update(self, serializer):
-        serializer.save(author=self.request.user)
-
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeWriteSerializer
 
-
-@api_view(['GET'])
-@permission_classes((AllowAny,))
-def get_short_url(request, id):
-    recipe = get_object_or_404(Recipe, id=id)
-    if RecipeShortURL.objects.filter(recipe=recipe).exists():
-        short_url = RecipeShortURL.objects.get(recipe=recipe).short_url
-        url = request.build_absolute_uri().replace(
-            f'api/recipes/{id}/get-link/', f's/{short_url}'
-        )
-        return Response({'short-link': url})
-    short_url = ''
-    full_url = request.build_absolute_uri().replace('/get-link/', '')
-    full_url = full_url.replace('api/', '')
-    while True:
-        short_url = ''.join(random.choices(
-            settings.CHARACTERS_FOR_SHORT_LINK,
-            k=settings.SHORT_LINK_LENGTH
-        )
-        )
-        if not RecipeShortURL.objects.filter(
-            short_url=short_url
-        ).exists():
-            RecipeShortURL.objects.create(recipe=recipe,
-                                          short_url=short_url,
-                                          full_url=full_url
-                                          )
-            break
-    url = request.build_absolute_uri().replace(
-        f'api/recipes/{id}/get-link/', f's/{short_url}'
+    @action(
+        detail=False,
+        methods=('POST', 'DELETE'),
+        url_path=r'(?P<id>\d+)/favorite',
+        permission_classes=(IsAuthenticated,)
     )
-    return Response({'short-link': url})
+    def manage_favorite(self, request, id):
+        if request.method == 'POST':
+            return create_object(
+                request.user,
+                id,
+                RecipeBriefSerializer,
+                Favourite,
+                'избранном'
+            )
+        return delete_object(request.user, id, Favourite, 'избранном')
 
+    @action(
+        detail=False,
+        methods=('POST', 'DELETE'),
+        url_path=r'(?P<id>\d+)/shopping_cart',
+        permission_classes=(IsAuthenticated,)
+    )
+    def manage_shopping_cart(self, request, id):
+        if request.method == 'POST':
+            return create_object(
+                request.user, id,
+                RecipeBriefSerializer,
+                ShoppingCart,
+                'списке покупок'
+            )
+        return delete_object(request.user, id, ShoppingCart, 'списке покупок')
 
-@api_view(['POST', 'DELETE'])
-def manage_favourite(request, id):
-    if request.method == 'POST':
-        return create_object(request, id, FavouriteSerializer)
-
-    if request.method == 'DELETE':
-        return delete_object(request, id, Favourite, 'избранное')
-
-
-@api_view(['POST', 'DELETE'])
-@permission_classes((IsAuthenticated,))
-def manage_shopping_cart(request, id):
-    if request.method == 'POST':
-        return create_object(request, id, ShoppingCartSerializer)
-    if request.method == 'DELETE':
-        return delete_object(request, id, ShoppingCart, 'список покупок')
-
-
-@api_view(['GET'])
-@permission_classes((IsAuthenticated,))
-def download_shopping_cart(request):
-    data = RecipeIngredient.objects.filter(
-        recipe__shoppingcart_recipes__user_id=request.user.id).values(
+    @action(
+        detail=False,
+        permission_classes=(IsAuthenticated,)
+    )
+    def download_shopping_cart(self, request):
+        recipes = RecipeIngredient.objects.filter(
+            recipe__shoppingcart_recipes__user_id=request.user.id).values(
             'ingredient__name', 'ingredient__measurement_unit').annotate(
                 ingredient_sum=Sum('amount')
-    )
-    shopping_cart = []
-    for ingredient in data:
-        name = ingredient['ingredient__name']
-        measurement_unit = ingredient['ingredient__measurement_unit']
-        amount = ingredient['ingredient_sum']
-        shopping_cart.append(
-            f'- {name} в количестве {amount} {measurement_unit}\n')
-    response = HttpResponse(shopping_cart, content_type='text/plain')
-    response['Content-Disposition'] = 'attachment;filename="shopping_list.txt"'
-    return response
+        )
+        shopping_cart = []
+        for ingredient in recipes:
+            name = ingredient['ingredient__name']
+            measurement_unit = ingredient['ingredient__measurement_unit']
+            amount = ingredient['ingredient_sum']
+            shopping_cart.append(
+                f'- {name} в количестве {amount} {measurement_unit}\n')
+        response = HttpResponse(shopping_cart, content_type='text/plain')
+        response['Content-Disposition'] = 'attachment;filename="shopping_list.txt"'
+        return response

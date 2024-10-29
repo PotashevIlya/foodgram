@@ -3,8 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (FoodgramUserViewSet, IngredientViewSet,
                     RecipeViewSet, TagViewSet,
-                    download_shopping_cart, get_short_url, manage_favourite,
-                    manage_shopping_cart)
+                    )
 
 router = DefaultRouter()
 router.register(
@@ -30,11 +29,5 @@ router.register(
 
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
-    path('recipes/<int:id>/get-link/', get_short_url),
-    path('recipes/<int:id>/favorite/', manage_favourite, name='favourite'),
-    path('recipes/<int:id>/shopping_cart/',
-         manage_shopping_cart, name='shopping_cart'),
-    path('recipes/download_shopping_cart/',
-         download_shopping_cart, name='download_shopping_cart'),
     path('', include(router.urls)),
 ]

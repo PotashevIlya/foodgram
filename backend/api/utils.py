@@ -2,31 +2,33 @@ from http import HTTPStatus
 
 from django.shortcuts import get_object_or_404, redirect
 from rest_framework.response import Response
+from rest_framework import serializers
 
-from recipes.models import FoodgramUser, Ingredient, Recipe, RecipeIngredient
-
-
-def create_object(request, id, serializer):
-    recipe = get_object_or_404(Recipe, id=id)
-    data = dict(user=request.user.id, recipe=recipe.id)
-    serializer = serializer(data=data)
-    if serializer.is_valid(raise_exception=True):
-        serializer.save()
-        return Response(serializer.data, status=HTTPStatus.CREATED)
-    return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
+from recipes.models import Ingredient, Recipe, RecipeIngredient
 
 
-def delete_object(request, id, model, model_name):
-    user = FoodgramUser.objects.get(id=request.user.id)
-    recipe = get_object_or_404(Recipe, id=id)
-    instance = model.objects.filter(user=user, recipe=recipe)
-    if instance.exists():
-        instance.delete()
-        return Response(status=HTTPStatus.NO_CONTENT)
+def create_object(user, recipe_id, serializer, model, model_name):
+    data = dict(user=user, recipe=get_object_or_404(Recipe, id=recipe_id))
+    if model.objects.filter(**data).exists():
+        raise serializers.ValidationError(
+            f'Этот рецепт уже есть в {model_name}'
+        )
+    model.objects.create(**data)
     return Response(
-        {'error': f'Этого рецепта не было в {model_name}'},
-        status=HTTPStatus.BAD_REQUEST
+        serializer(data['recipe']).data,
+        status=HTTPStatus.CREATED
     )
+
+
+def delete_object(user, recipe_id, model, model_name):
+    data = dict(user=user, recipe=get_object_or_404(Recipe, id=recipe_id))
+    object = model.objects.filter(**data)
+    if not object.exists():
+        raise serializers.ValidationError(
+            f'Этого рецепта нет в {model_name}'
+        )
+    object.delete()
+    return Response(status=HTTPStatus.NO_CONTENT)
 
 
 def create_ingredients_in_recipe(recipe, ingredients):
@@ -41,6 +43,6 @@ def create_ingredients_in_recipe(recipe, ingredients):
         )
 
 
-def redirection(request, short_url):
-    obj = get_object_or_404(RecipeShortURL, short_url=short_url)
-    return redirect(obj.full_url)
+# def redirection(request, short_url):
+#     obj = get_object_or_404(RecipeShortURL, short_url=short_url)
+#     return redirect(obj.full_url)

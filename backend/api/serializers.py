@@ -1,5 +1,5 @@
 from djoser.serializers import UserSerializer
-from drf_extra_fields.fields import Base64ImageField, HybridImageField
+from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers, validators
 
 from recipes.models import (
@@ -12,7 +12,7 @@ from recipes.models import (
 from .utils import create_ingredients_in_recipe
 
 
-class NeverEmptyBase64ImageField(HybridImageField):
+class NeverEmptyBase64ImageField(Base64ImageField):
     EMPTY_VALUES = ()
 
 
@@ -56,9 +56,7 @@ class SubscriptionReadSerializer(serializers.ModelSerializer):
                 ).query_params.get(
                     'recipes_limit',
                     10**10
-                )
-            )
-            ],
+                ))],
             many=True
         ).data
 
@@ -236,45 +234,3 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return RecipeReadSerializer(
             instance, context={'request': self.context['request']}
         ).data
-
-
-class FavouriteSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        queryset=FoodgramUser.objects.all())
-    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
-
-    class Meta:
-        model = Favourite
-        fields = ('user', 'recipe')
-        validators = (validators.UniqueTogetherValidator(
-            queryset=Favourite.objects.all(),
-            fields=('user', 'recipe'),
-            message=('Этот рецепт уже есть в избранном')
-        ),
-        )
-
-    def to_representation(self, instance):
-        return RecipeBriefSerializer().to_representation(
-            Recipe.objects.get(id=instance.recipe.id)
-        )
-
-
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        queryset=FoodgramUser.objects.all())
-    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
-
-    class Meta:
-        model = ShoppingCart
-        fields = ('user', 'recipe')
-        validators = (validators.UniqueTogetherValidator(
-            queryset=ShoppingCart.objects.all(),
-            fields=('user', 'recipe'),
-            message=('Этот рецепт уже есть в списке покупок')
-        ),
-        )
-
-    def to_representation(self, instance):
-        return RecipeBriefSerializer().to_representation(
-            Recipe.objects.get(id=instance.recipe.id)
-        )
