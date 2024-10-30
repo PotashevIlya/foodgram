@@ -1,13 +1,12 @@
 from http import HTTPStatus
-import io
-from django.conf import settings
+
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import HttpResponse, get_object_or_404
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import permissions, serializers, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated,
     IsAuthenticatedOrReadOnly
@@ -18,7 +17,6 @@ from recipes.models import (
     Favourite, FoodgramUser, Ingredient, Recipe,
     RecipeIngredient, ShoppingCart, Subscription, Tag
 )
-
 from .filters import IngredientsFilter, RecipeFilter
 from .pagination import PageLimitPagination
 from .permissions import IsAuthorOrReadOnly
@@ -177,7 +175,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        permission_classes=(AllowAny,)
+        permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
         ingredients_in_shopcart = RecipeIngredient.objects.filter(

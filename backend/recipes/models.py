@@ -2,26 +2,14 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from .validators import validate_username
+from .validators import MIN_AMOUNT, validate_username
 
 MAX_USERNAME_LENGTH = 150
 MAX_EMAIL_LENGTH = 254
 MAX_PASSWORD_LENGTH = 128
 MIN_COOKING_TIME = 1
-MIN_INGREDIENT_AMOUNT = 1
 MAX_RECIPE_NAME_LENGTH = 256
 
-
-# class FoodgramUserManager(BaseUserManager):
-#     def create_user(self, email, password, **extra_fields):
-#         if not email:
-#             raise ValueError('The Email field must be set')
-
-#         email = self.normalize_email(email)
-#         user = self.model(email=email, **extra_fields)
-#         user.set_password(password)
-#         user.save(using=self._db)
-#         return user
 
 class FoodgramUser(AbstractUser):
     email = models.EmailField(
@@ -219,8 +207,8 @@ class RecipeIngredient(models.Model):
         verbose_name='Мера',
         validators=[
             MinValueValidator(
-                MIN_INGREDIENT_AMOUNT,
-                message=f'Минимальное количество - {MIN_INGREDIENT_AMOUNT}'
+                MIN_AMOUNT,
+                message=f'Минимальное количество - {MIN_AMOUNT}'
             ),
         ]
     )
