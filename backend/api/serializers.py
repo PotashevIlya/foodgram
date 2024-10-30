@@ -160,11 +160,11 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'name', 'image', 'text', 'cooking_time')
 
     def validate_ingredients(self, ingredients):
-        validate_ingredients_or_tags(ingredients, 'objects', Ingredient)
+        validate_ingredients_or_tags(ingredients, 'ingredients', Ingredient)
         return ingredients
 
     def validate_tags(self, tags):
-        validate_ingredients_or_tags(tags, 'list', Tag)
+        validate_ingredients_or_tags(tags, 'tags', Tag)
         return tags
 
     def validate(self, data):

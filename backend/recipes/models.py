@@ -93,13 +93,13 @@ class Subscription(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(
-        verbose_name='Категория',
+        verbose_name='Название',
         max_length=32,
         unique=True,
         help_text='Укажите категорию'
     )
     slug = models.SlugField(
-        verbose_name='Категория',
+        verbose_name='Ярлык',
         max_length=32,
         unique=True,
         help_text='Укажите категорию'

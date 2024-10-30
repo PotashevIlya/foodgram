@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import (Favourite, FoodgramUser, Ingredient, Recipe,
-                     RecipeIngredient, ShoppingCart, Subscription, Tag)
+from .models import (
+    Favourite, FoodgramUser, Ingredient, Recipe,
+    RecipeIngredient, ShoppingCart, Subscription, Tag
+)
 
 
 class FoodgramUserAdmin(UserAdmin):

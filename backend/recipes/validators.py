@@ -27,43 +27,32 @@ def validate_ingredients_or_tags(array, mode, model):
         raise serializers.ValidationError(
             'Укажите хотя бы один элемент'
         )
-    unique_elements = []
+    if mode == 'ingredients':
+        all_id = [element['id'] for element in array]
+        small_amount_ingredients = [
+            element['id'] for element in array if element['amount']
+            < MIN_AMOUNT
+        ]
+        if small_amount_ingredients:
+            raise serializers.ValidationError(
+                f'Кол-во меньше {MIN_AMOUNT}: {small_amount_ingredients}'
+            )
+    if mode == 'tags':
+        all_id = [element.id for element in array]
+    all_elements = []
     non_unique_elements = []
     non_existing_elements = []
-    not_allowed_amount = []
-    if mode == 'list':
-        for element in array:
-            if element.id in unique_elements:
-                non_unique_elements.append(element.id)
-            if not model.objects.filter(id=element.id).exists():
-                non_existing_elements.append(element)
-            unique_elements.append(element.id)
-        if non_unique_elements:
-            raise serializers.ValidationError(
-                f'Значения не должны повторяться: {non_unique_elements}'
-            )
-        if non_existing_elements:
-            raise serializers.ValidationError(
-                f'Значений не существует: {non_existing_elements}'
-            )
-    if mode == 'objects':
-        for element in array:
-            if element['id'] in unique_elements:
-                non_unique_elements.append(element['id'])
-            if not model.objects.filter(id=element['id']).exists():
-                non_existing_elements.append(element['id'])
-            if element['amount'] < 1:
-                not_allowed_amount.append(element['id'])
-            unique_elements.append(element['id'])
-        if non_unique_elements:
-            raise serializers.ValidationError(
-                f'Значения не должны повторяться: {non_unique_elements}'
-            )
-        if non_existing_elements:
-            raise serializers.ValidationError(
-                f'Значений не существует: {non_existing_elements}'
-            )
-        if not_allowed_amount:
-            raise serializers.ValidationError(
-                f'Укажите кол-во больше {MIN_AMOUNT}: {not_allowed_amount}'
-            )
+    for element in all_id:
+        if element in all_elements:
+            non_unique_elements.append(element)
+        if not model.objects.filter(id=element).exists():
+            non_existing_elements.append(element)
+        all_elements.append(element)
+    if non_unique_elements:
+        raise serializers.ValidationError(
+            f'Значения не должны повторяться: {non_unique_elements}'
+        )
+    if non_existing_elements:
+        raise serializers.ValidationError(
+            f'Значений не существует: {non_existing_elements}'
+        )
