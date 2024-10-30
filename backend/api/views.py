@@ -198,3 +198,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
             as_attachment=True,
             filename='shopping_list.txt'
         )
+
+    @action(
+        detail=False,
+        url_path=r'(?P<id>\d+)/get-link',
+        permission_classes=(AllowAny,)
+    )
+    def get_short_link(view, request, **kwargs):
+        recipe = get_object_or_404(Recipe, id=kwargs['id'])
+        short_link = request.build_absolute_uri().replace(
+            f'api/recipes/{recipe.id}/get-link/', f's/{recipe.id}'
+        )
+        return Response({'short-link': short_link})

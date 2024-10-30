@@ -141,7 +141,3 @@ DJOSER = {
         'user': ['rest_framework.permissions.AllowAny'],
     }
 }
-
-
-CHARACTERS_FOR_SHORT_LINK = 'ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz1234567890'
-SHORT_LINK_LENGTH = 3
