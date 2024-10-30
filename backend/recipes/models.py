@@ -54,7 +54,7 @@ class FoodgramUser(AbstractUser):
         verbose_name='Аватар',
         upload_to='recipes/images/',
         null=True,
-        blank=True
+        blank=True,
     )
 
     USERNAME_FIELD = 'email'
