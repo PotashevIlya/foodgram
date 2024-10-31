@@ -1,12 +1,11 @@
-from http import HTTPStatus
 import datetime
 import io
+from http import HTTPStatus
 
-from django.shortcuts import get_object_or_404, redirect
-from rest_framework.response import Response
-from rest_framework import serializers
-
+from django.shortcuts import get_object_or_404
 from recipes.models import Ingredient, Recipe, RecipeIngredient
+from rest_framework import serializers
+from rest_framework.response import Response
 
 
 def create_object(user, recipe_id, serializer, model, model_name):
@@ -78,8 +77,3 @@ def generate_shopping_list(products, recipes):
             encoding='utf-8'
         )
     )
-
-
-# def redirection(request, short_url):
-#     obj = get_object_or_404(RecipeShortURL, short_url=short_url)
-#     return redirect(obj.full_url)

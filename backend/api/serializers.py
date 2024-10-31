@@ -1,14 +1,12 @@
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import serializers, validators
-
 from recipes.models import (
-    MAX_RECIPE_NAME_LENGTH,
-    MIN_COOKING_TIME, Favourite, FoodgramUser,
-    Ingredient, Recipe, RecipeIngredient, ShoppingCart,
-    Subscription, Tag
+    MAX_RECIPE_NAME_LENGTH, MIN_COOKING_TIME,
+    FoodgramUser, Ingredient, Recipe,
+    RecipeIngredient, ShoppingCart, Subscription, Tag
 )
 from recipes.validators import validate_ingredients_or_tags
+from rest_framework import serializers
 
 from .utils import create_ingredients_in_recipe
 

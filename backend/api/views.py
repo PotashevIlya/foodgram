@@ -5,6 +5,10 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
+from recipes.models import (
+    Favourite, FoodgramUser, Ingredient, Recipe,
+    RecipeIngredient, ShoppingCart, Subscription, Tag
+)
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -13,18 +17,13 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 
-from recipes.models import (
-    Favourite, FoodgramUser, Ingredient, Recipe,
-    RecipeIngredient, ShoppingCart, Subscription, Tag
-)
 from .filters import IngredientsFilter, RecipeFilter
 from .pagination import PageLimitPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
-    AvatarSerializer,
-    IngredientSerializer, RecipeBriefSerializer,
-    RecipeReadSerializer, RecipeWriteSerializer,
-    SubscriptionReadSerializer,
+    AvatarSerializer, IngredientSerializer,
+    RecipeBriefSerializer, RecipeReadSerializer,
+    RecipeWriteSerializer, SubscriptionReadSerializer,
     TagSerializer
 )
 from .utils import create_object, delete_object, generate_shopping_list
