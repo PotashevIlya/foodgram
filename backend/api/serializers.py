@@ -1,14 +1,19 @@
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from recipes.constants import MAX_RECIPE_NAME_LENGTH, MIN_COOKING_TIME
+from recipes.constants import (
+    MAX_RECIPE_NAME_LENGTH, MIN_COOKING_TIME, MIN_AMOUNT
+)
 from recipes.models import (
-    FoodgramUser, Ingredient, Recipe,
+    Favourite, FoodgramUser, Ingredient, Recipe,
     RecipeIngredient, ShoppingCart, Subscription, Tag
 )
 from recipes.validators import validate_ingredients_or_tags
 from rest_framework import serializers
 
-from .utils import create_ingredients_in_recipe
+from .utils import (
+    check_authentification, check_recipe_in_shopcart_or_favorites,
+    create_ingredients_in_recipe
+)
 
 
 class NeverEmptyBase64ImageField(Base64ImageField):
@@ -20,14 +25,16 @@ class FoodgramUserReadSerializer(UserSerializer):
 
     class Meta:
         model = FoodgramUser
-        fields = tuple(UserSerializer().fields) + ('avatar', 'is_subscribed')
+        fields = (*UserSerializer.Meta.fields, 'avatar', 'is_subscribed')
 
     def get_is_subscribed(self, author):
-        request = self.context.get('request')
-        return (request.user.is_authenticated
-                and Subscription.objects.filter(
-                    subscriber=request.user, author=author
-                ).exists())
+        return (
+            check_authentification(self.context)
+            and Subscription.objects.filter(
+                subscriber=self.context['request'].user,
+                author=author
+            ).exists()
+        )
 
 
 class AvatarSerializer(serializers.Serializer):
@@ -47,6 +54,12 @@ class SubscriptionReadSerializer(serializers.ModelSerializer):
         read_only=True, source='recipes.count')
     is_subscribed = serializers.BooleanField(default=True)
 
+    class Meta:
+        model = FoodgramUser
+        fields = (
+            *FoodgramUserReadSerializer.Meta.fields, 'recipes', 'recipes_count'
+        )
+
     def get_recipes(self, obj):
         return RecipeBriefSerializer(
             obj.recipes.all()[:int(
@@ -58,12 +71,6 @@ class SubscriptionReadSerializer(serializers.ModelSerializer):
                 ))],
             many=True
         ).data
-
-    class Meta:
-        model = FoodgramUser
-        fields = tuple(FoodgramUserReadSerializer().fields) + (
-            'recipes', 'recipes_count'
-        )
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -96,7 +103,12 @@ class RecipeIngredientsReadSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
-    amount = serializers.IntegerField()
+    amount = serializers.IntegerField(
+        min_value=MIN_AMOUNT,
+        error_messages={
+            'min_value': f'Укажите количество больше {MIN_AMOUNT}'
+        }
+    )
 
     class Meta:
         model = RecipeIngredient
@@ -119,23 +131,15 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                             'name', 'image', 'text', 'cooking_time'
                             )
 
-    def get_is_favorited(self, obj):
-        return (
-            self.context
-            and self.context['request'].user.is_authenticated
-            and ShoppingCart.objects.filter(
-                user_id=self.context['request'].user.id,
-                recipe=obj
-            ).exists())
+    def get_is_favorited(self, recipe):
+        return check_recipe_in_shopcart_or_favorites(
+            self.context, Favourite, recipe
+        )
 
-    def get_is_in_shopping_cart(self, obj):
-        return (
-            self.context
-            and self.context['request'].user.is_authenticated
-            and ShoppingCart.objects.filter(
-                user_id=self.context['request'].user.id,
-                recipe=obj
-            ).exists())
+    def get_is_in_shopping_cart(self, recipe):
+        return check_recipe_in_shopcart_or_favorites(
+            self.context, ShoppingCart, recipe
+        )
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):

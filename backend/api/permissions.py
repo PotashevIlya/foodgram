@@ -3,7 +3,7 @@ from rest_framework import permissions
 
 class IsAuthorOrReadOnly(permissions.BasePermission):
 
-    message = 'Нельзя изменять рецепты других пользователей'
+    message = 'Нельзя изменять публикации других пользователей'
 
     def has_object_permission(self, request, view, obj):
         return (

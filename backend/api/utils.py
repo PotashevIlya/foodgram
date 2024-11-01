@@ -8,27 +8,37 @@ from rest_framework import serializers
 from rest_framework.response import Response
 
 
-def create_object(user, recipe_id, serializer, model, model_name):
-    data = dict(user=user, recipe=get_object_or_404(Recipe, id=recipe_id))
-    if model.objects.filter(**data).exists():
-        raise serializers.ValidationError(
-            f'Этот рецепт уже есть в {model_name}'
-        )
-    model.objects.create(**data)
-    return Response(
-        serializer(data['recipe']).data,
-        status=HTTPStatus.CREATED
+def check_authentification(context):
+    return (
+        context
+        and context['request'].user.is_authenticated
     )
 
 
-def delete_object(user, recipe_id, model, model_name):
-    data = dict(user=user, recipe=get_object_or_404(Recipe, id=recipe_id))
-    object = model.objects.filter(**data)
-    if not object.exists():
-        raise serializers.ValidationError(
-            f'Этого рецепта нет в {model_name}'
+def check_recipe_in_shopcart_or_favorites(context, model, obj):
+    return (
+        check_authentification(context)
+        and model.objects.filter(
+            user_id=context['request'].user.id,
+            recipe=obj
+        ).exists()
+    )
+
+
+def add_or_remove_recipe(request, id, model, serializer):
+    if request.method == 'POST':
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=id)
+        obj, created = model.objects.get_or_create(user=user, recipe=recipe)
+        if not created:
+            raise serializers.ValidationError(
+                'Вы уже добавили этот рецепт'
+            )
+        return Response(
+            serializer(recipe).data,
+            status=HTTPStatus.CREATED
         )
-    object.delete()
+    get_object_or_404(model, user=request.user, recipe_id=id).delete()
     return Response(status=HTTPStatus.NO_CONTENT)
 
 

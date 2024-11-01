@@ -94,13 +94,13 @@ class Tag(models.Model):
         verbose_name='Название',
         max_length=32,
         unique=True,
-        help_text='Укажите категорию'
+        help_text='Укажите название'
     )
     slug = models.SlugField(
         verbose_name='Ярлык',
         max_length=32,
         unique=True,
-        help_text='Укажите категорию'
+        help_text='Укажите название'
     )
 
     class Meta:

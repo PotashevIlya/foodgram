@@ -26,7 +26,7 @@ from .serializers import (
     RecipeWriteSerializer, SubscriptionReadSerializer,
     TagSerializer
 )
-from .utils import create_object, delete_object, generate_shopping_list
+from .utils import add_or_remove_recipe, generate_shopping_list
 
 
 class FoodgramUserViewSet(UserViewSet):
@@ -53,8 +53,7 @@ class FoodgramUserViewSet(UserViewSet):
             user.avatar = avatar
             user.save()
             return Response({'avatar': user.avatar.url}, status=HTTPStatus.OK)
-        user = FoodgramUser.objects.get(id=request.user.id)
-        user.avatar.delete()
+        request.user.avatar.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(
@@ -64,33 +63,33 @@ class FoodgramUserViewSet(UserViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def manage_subscription(self, request, id):
-        data = dict(
-            subscriber=request.user,
-            author=get_object_or_404(FoodgramUser, id=id)
-        )
+        subscriber = request.user
+        author = get_object_or_404(FoodgramUser, id=id)
         if request.method == 'POST':
-            if data['subscriber'] == data['author']:
+            if subscriber == author:
                 raise serializers.ValidationError(
                     'Нельзя подписаться на себя самого'
                 )
-            if Subscription.objects.filter(**data).exists():
+            subcription, created = Subscription.objects.get_or_create(
+                subscriber=subscriber,
+                author=author
+            )
+            if not created:
                 raise serializers.ValidationError(
                     'Вы уже подписаны на этого пользователя'
                 )
-            Subscription.objects.create(**data)
             return Response(
                 SubscriptionReadSerializer(
-                    data['author'],
+                    author,
                     context={'request': request},
                 ).data,
                 status=HTTPStatus.CREATED
             )
-        subscription = Subscription.objects.filter(**data)
-        if not subscription.exists():
-            raise serializers.ValidationError(
-                'Вы не были подписаны на этого пользователя'
-            )
-        subscription.delete()
+        get_object_or_404(
+            Subscription,
+            author=author,
+            subscriber=subscriber
+        ).delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(
@@ -98,14 +97,15 @@ class FoodgramUserViewSet(UserViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def subscriptions(self, request):
-        queryset = FoodgramUser.objects.filter(
-            authors__subscriber=request.user)
-        serializer = SubscriptionReadSerializer(
-            self.paginate_queryset(queryset),
-            context={'request': request},
-            many=True
+        return self.get_paginated_response(
+            SubscriptionReadSerializer(
+                self.paginate_queryset(FoodgramUser.objects.filter(
+                    authors__subscriber=request.user
+                )),
+                context={'request': request},
+                many=True
+            ).data
         )
-        return self.get_paginated_response(serializer.data)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -146,15 +146,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def manage_favorite(self, request, id):
-        if request.method == 'POST':
-            return create_object(
-                request.user,
-                id,
-                RecipeBriefSerializer,
-                Favourite,
-                'избранном'
-            )
-        return delete_object(request.user, id, Favourite, 'избранном')
+        return add_or_remove_recipe(
+            request, id, Favourite, RecipeBriefSerializer
+        )
 
     @action(
         detail=False,
@@ -163,14 +157,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def manage_shopping_cart(self, request, id):
-        if request.method == 'POST':
-            return create_object(
-                request.user, id,
-                RecipeBriefSerializer,
-                ShoppingCart,
-                'списке покупок'
-            )
-        return delete_object(request.user, id, ShoppingCart, 'списке покупок')
+        return add_or_remove_recipe(
+            request, id, ShoppingCart, RecipeBriefSerializer
+        )
 
     @action(
         detail=False,
@@ -204,7 +193,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(AllowAny,)
     )
     def get_short_link(view, request, **kwargs):
-        recipe = get_object_or_404(Recipe, id=kwargs['id'])
+        if not Recipe.objects.filter(id=kwargs['id']).exists():
+            raise serializers.ValidationError(
+                'Рецепта не существует'
+            )
         short_link = request.build_absolute_uri().replace(
             f'api/recipes/{recipe.id}/get-link/', f's/{recipe.id}'
         )
