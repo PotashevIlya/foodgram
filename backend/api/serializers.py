@@ -1,7 +1,7 @@
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
+from recipes.constants import MAX_RECIPE_NAME_LENGTH, MIN_COOKING_TIME
 from recipes.models import (
-    MAX_RECIPE_NAME_LENGTH, MIN_COOKING_TIME,
     FoodgramUser, Ingredient, Recipe,
     RecipeIngredient, ShoppingCart, Subscription, Tag
 )

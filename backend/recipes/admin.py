@@ -125,7 +125,7 @@ class RecipeAdmin(admin.ModelAdmin):
     )
 
     def total_in_favorites(self, recipe):
-        return recipe.favourite_recipes.count()
+        return recipe.favourite.count()
 
     def get_image(self, recipe):
         if recipe.image:

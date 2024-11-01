@@ -2,13 +2,11 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from .validators import MIN_AMOUNT, validate_username
-
-MAX_USERNAME_LENGTH = 150
-MAX_EMAIL_LENGTH = 254
-MAX_PASSWORD_LENGTH = 128
-MIN_COOKING_TIME = 1
-MAX_RECIPE_NAME_LENGTH = 256
+from .constants import (
+    MAX_USERNAME_LENGTH, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH,
+    MIN_COOKING_TIME, MAX_RECIPE_NAME_LENGTH, MIN_AMOUNT
+)
+from .validators import validate_username
 
 
 class FoodgramUser(AbstractUser):
@@ -111,7 +109,7 @@ class Tag(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return f'{self.name}'
+        return self.name
 
 
 class Ingredient(models.Model):
@@ -123,7 +121,7 @@ class Ingredient(models.Model):
     measurement_unit = models.CharField(
         verbose_name='Мера',
         max_length=64,
-        help_text='Укажите меру продукта'
+        help_text='Укажите единицу измерения'
     )
 
     class Meta:
@@ -170,7 +168,8 @@ class Recipe(models.Model):
         through='RecipeIngredient'
     )
     tags = models.ManyToManyField(
-        Tag, verbose_name='Категории'
+        Tag,
+        verbose_name='Теги'
     )
     cooking_time = models.PositiveIntegerField(
         verbose_name='Время приготовления',
@@ -227,13 +226,11 @@ class UserRecipeBaseModel(models.Model):
         FoodgramUser,
         on_delete=models.CASCADE,
         verbose_name='Пользователь',
-        related_name='%(class)s_users'
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
         verbose_name='Рецепт',
-        related_name='%(class)s_recipes'
     )
 
     class Meta:
@@ -245,6 +242,7 @@ class UserRecipeBaseModel(models.Model):
             )
         ]
         ordering = ('-recipe__pub_date',)
+        default_related_name = '%(class)s'
 
     def __str__(self):
         return f'{self.recipe} у {self.user}'

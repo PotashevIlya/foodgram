@@ -3,7 +3,7 @@ import re
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-MIN_AMOUNT = 1
+from .constants import MIN_AMOUNT
 WRONG_SYMBOLS_MESSAGE = (
     'Допустимы буквы, цифры и символы @ . + - _ .'
     'Нельзя использовать символы: {wrong_symbols}'
