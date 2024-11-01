@@ -7,7 +7,7 @@ from recipes.models import (
     Favourite, FoodgramUser, Ingredient, Recipe,
     RecipeIngredient, ShoppingCart, Subscription, Tag
 )
-from recipes.validators import validate_ingredients_or_tags
+from .validators import validate_ingredients_or_tags
 from rest_framework import serializers
 
 from .utils import (
@@ -162,10 +162,12 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'name', 'image', 'text', 'cooking_time')
 
     def validate_ingredients(self, ingredients):
+        all_id = [ingredient['id'] for ingredient in ingredients]
         validate_ingredients_or_tags(ingredients, 'ingredients', Ingredient)
         return ingredients
 
     def validate_tags(self, tags):
+        all_id = [tag.id for tag in tags]
         validate_ingredients_or_tags(tags, 'tags', Tag)
         return tags
 

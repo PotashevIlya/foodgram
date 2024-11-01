@@ -197,7 +197,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 'Рецепта не существует'
             )
-        # short_link = request.build_absolute_uri().replace(
-        #     f'api/recipes/{kwargs['id']}/get-link/', f's/{kwargs['id']}'
-        # )
-        return Response({'short-link': 'short_link'})
+        return Response(
+            {'short-link': Recipe.get_absolute_url(
+                request, kwargs['id'], short_link=True
+            )})

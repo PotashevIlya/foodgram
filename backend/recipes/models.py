@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.urls import reverse
 
 from .constants import (
     MAX_USERNAME_LENGTH, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH,
@@ -186,6 +187,11 @@ class Recipe(models.Model):
         verbose_name_plural = 'Рецепты'
         ordering = ('-pub_date',)
         default_related_name = 'recipes'
+
+    def get_absolute_url(request, id, short_link=False):
+        if short_link:
+            return request.build_absolute_uri(f'/s/{id}')
+        return request.build_absolute_uri(f'/recipes/{id}')
 
     def __str__(self):
         return f'{self.name}. Автор - {self.author}.'
