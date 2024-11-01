@@ -1,5 +1,4 @@
 import datetime
-import io
 from http import HTTPStatus
 
 from django.shortcuts import get_object_or_404
@@ -43,47 +42,35 @@ def add_or_remove_recipe(request, id, model, serializer):
 
 
 def create_ingredients_in_recipe(recipe, ingredients):
-    ingredients_list = []
-    for ingredient in ingredients:
-        ingredient_id = ingredient.pop('id')
-        ingredient_amount = ingredient.pop('amount')
-        current_ingredient = Ingredient.objects.get(id=ingredient_id)
-        ingredients_list.append(
-            RecipeIngredient(
-                recipe=recipe,
-                ingredient=current_ingredient,
-                amount=ingredient_amount
-            )
-        )
-        RecipeIngredient.objects.bulk_create(ingredients_list)
+    ingredients_list = [
+        RecipeIngredient(
+            recipe=recipe,
+            ingredient=Ingredient.objects.get(id=ingredient.pop('id')),
+            amount=ingredient.pop('amount')
+        ) for ingredient in ingredients
+    ]
+    RecipeIngredient.objects.bulk_create(
+        ingredients_list, ignore_conflicts=True
+    )
 
 
 def generate_shopping_list(products, recipes):
-    products_in_shopcart = []
-    recipes_in_shopcart = []
-    for i, product in enumerate(products):
-        name = product['ingredient__name'].capitalize()
-        measurement_unit = product['ingredient__measurement_unit']
-        amount = product['ingredient_sum']
-        products_in_shopcart.append(
-            f'{i+1}.{name} в количестве {amount} {measurement_unit}.'
-        )
-    for recipe in recipes:
-        name = recipe['recipe__name'].capitalize()
-        recipes_in_shopcart.append(
-            f'- {name}'
-        )
-    return io.BytesIO(
-        bytes(
-            '\n'.join(
-                [
-                    f'Список покупок от {datetime.date.today().isoformat()}:',
-                    'Продукты:',
-                    *products_in_shopcart,
-                    'Для рецептов:',
-                    *recipes_in_shopcart
-                ]
-            ),
-            encoding='utf-8'
-        )
+    product_string = ('{i}.{ingredient__name} в количестве {ingredient_sum}'
+                      '{ingredient__measurement_unit}.')
+    recipe_string = '- {recipe__name}'
+    products_in_shopcart = [
+        product_string.format(i=i, **product)
+        for i, product in enumerate(products, start=1)
+    ]
+    recipes_in_shopcart = [
+        recipe_string.format(**recipe) for recipe in recipes
+    ]
+    return '\n'.join(
+        [
+            f'Список покупок от {datetime.date.today().isoformat()}:',
+            'Продукты:',
+            *products_in_shopcart,
+            'Для рецептов:',
+            *recipes_in_shopcart
+        ]
     )
