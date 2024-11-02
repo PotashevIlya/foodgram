@@ -1,5 +1,7 @@
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
+from rest_framework import serializers
+
 from recipes.constants import (
     MAX_RECIPE_NAME_LENGTH, MIN_COOKING_TIME, MIN_AMOUNT
 )
@@ -8,8 +10,6 @@ from recipes.models import (
     RecipeIngredient, ShoppingCart, Subscription, Tag
 )
 from .validators import validate_ingredients_or_tags
-from rest_framework import serializers
-
 from .utils import (
     get_serializer_method_field_value,
     create_ingredients_in_recipe

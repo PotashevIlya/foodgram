@@ -5,4 +5,4 @@ from .models import Recipe
 
 def redirection(request, id):
     recipe = get_object_or_404(Recipe, id=id)
-    return redirect(Recipe.get_absolute_url(request, id))
+    return redirect(recipe.get_absolute_url(request, id))
