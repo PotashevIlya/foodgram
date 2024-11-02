@@ -29,46 +29,35 @@ class FoodgramUserFilter(admin.SimpleListFilter):
 class CookingTimeFilter(admin.SimpleListFilter):
     FAST = 30
     MIDDLE = 60
-    COOKING_TIME_RANGES = dict(
-        fast=(0, FAST),
-        middle=(FAST, MIDDLE),
-        long=(MIDDLE, 10**10)
-    )
+    COOKING_TIME_RANGES = {
+        f'До {FAST} мин': (0, FAST),
+        f'До {MIDDLE} мин': (FAST, MIDDLE),
+        'Дольше': (MIDDLE, 10**10)
+    }
     title = 'Время готовки'
     parameter_name = 'cooking_time'
-    fast_recipes_count = 0
-    middle_recipes_count = 0
-    long_recipes_count = 0
-    for recipe in Recipe.objects.all():
-        if recipe.cooking_time < FAST:
-            fast_recipes_count += 1
-        elif recipe.cooking_time > MIDDLE:
-            long_recipes_count += 1
-        else:
-            middle_recipes_count += 1
+
+    def get_filtered_recipes(self, queryset, param):
+        return queryset.filter(cooking_time__range=param)
 
     def lookups(self, request, model_admin):
-        return (
+        string = '{name}({count})'
+        return [
             (
-                'fast',
-                f'Быстрее {self.FAST} мин ({self.fast_recipes_count})'
-            ),
-            (
-                'middle',
-                f'Быстрее {self.MIDDLE} мин ({self.middle_recipes_count})'
-            ),
-            (
-                'long',
-                f'Долгие ({self.long_recipes_count})'
+                name,
+                string.format(
+                    name=name, count=self.get_filtered_recipes(
+                        Recipe.objects.all(),
+                        range
+                    ).count()
+                )
             )
-        )
-
-    def filter_queryset(self, queryset, param):
-        return queryset.filter(cooking_time__range=param)
+            for name, range in self.COOKING_TIME_RANGES.items()
+        ]
 
     def queryset(self, request, queryset):
         if self.value():
-            return self.filter_queryset(
+            return self.get_filtered_recipes(
                 queryset, self.COOKING_TIME_RANGES[f'{self.value()}']
             )
         return queryset
