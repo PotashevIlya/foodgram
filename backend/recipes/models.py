@@ -187,11 +187,6 @@ class Recipe(models.Model):
         ordering = ('-pub_date',)
         default_related_name = 'recipes'
 
-    def get_absolute_url(request, id, short_link=False):
-        if short_link:
-            return request.build_absolute_uri(f'/s/{id}')
-        return request.build_absolute_uri(f'/recipes/{id}')
-
     def __str__(self):
         return f'{self.name}. Автор - {self.author}.'
 

@@ -1,8 +1,12 @@
-from django.shortcuts import get_object_or_404, redirect
+from django.core.exceptions import ValidationError
+from django.shortcuts import redirect
 
 from .models import Recipe
 
 
 def redirection(request, id):
-    recipe = get_object_or_404(Recipe, id=id)
-    return redirect(recipe.get_absolute_url(request, id))
+    if not Recipe.objects.filter(id=id).exists():
+        raise ValidationError(
+            'Рецепта не существует'
+        )
+    return redirect(request.build_absolute_uri(f'/recipes/{id}'))

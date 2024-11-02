@@ -198,6 +198,4 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 'Рецепта не существует'
             )
         return Response(
-            {'short-link': Recipe.get_absolute_url(
-                request, kwargs['id'], short_link=True
-            )})
+            {'short-link': request.build_absolute_uri(f'/s/{kwargs["id"]}')})
