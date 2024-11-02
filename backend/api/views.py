@@ -100,7 +100,7 @@ class FoodgramUserViewSet(UserViewSet):
         return self.get_paginated_response(
             SubscriptionReadSerializer(
                 self.paginate_queryset(FoodgramUser.objects.filter(
-                    authors__subscriber=request.user
+                    followings__subscriber=request.user
                 )),
                 context={'request': request},
                 many=True

@@ -11,7 +11,7 @@ from .validators import validate_ingredients_or_tags
 from rest_framework import serializers
 
 from .utils import (
-    check_authentification, check_recipe_in_shopcart_or_favorites,
+    get_serializer_method_field_value,
     create_ingredients_in_recipe
 )
 
@@ -28,12 +28,8 @@ class FoodgramUserReadSerializer(UserSerializer):
         fields = (*UserSerializer.Meta.fields, 'avatar', 'is_subscribed')
 
     def get_is_subscribed(self, author):
-        return (
-            check_authentification(self.context)
-            and Subscription.objects.filter(
-                subscriber=self.context['request'].user,
-                author=author
-            ).exists()
+        return get_serializer_method_field_value(
+            self.context, Subscription, author, 'subscriber', 'author'
         )
 
 
@@ -127,13 +123,13 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                             )
 
     def get_is_favorited(self, recipe):
-        return check_recipe_in_shopcart_or_favorites(
-            self.context, Favourite, recipe
+        return get_serializer_method_field_value(
+            self.context, Favourite, recipe, 'user_id', 'recipe'
         )
 
     def get_is_in_shopping_cart(self, recipe):
-        return check_recipe_in_shopcart_or_favorites(
-            self.context, ShoppingCart, recipe
+        return get_serializer_method_field_value(
+            self.context, ShoppingCart, recipe, 'user_id', 'recipe'
         )
 
 
@@ -153,8 +149,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('tags', 'author', 'ingredients',
-                  'name', 'image', 'text', 'cooking_time')
+        fields = (
+            'tags', 'author', 'ingredients',
+            'name', 'image', 'text', 'cooking_time'
+        )
 
     def validate_ingredients(self, ingredients):
         all_id = [ingredient['id'] for ingredient in ingredients]

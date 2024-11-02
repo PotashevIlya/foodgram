@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.urls import reverse
 
 from .constants import (
     MAX_USERNAME_LENGTH, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH,
@@ -73,7 +72,7 @@ class Subscription(models.Model):
         FoodgramUser, on_delete=models.CASCADE, related_name='subscribers'
     )
     author = models.ForeignKey(
-        FoodgramUser, on_delete=models.CASCADE, related_name='authors'
+        FoodgramUser, on_delete=models.CASCADE, related_name='followings'
     )
 
     class Meta:
@@ -137,7 +136,7 @@ class Ingredient(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.name}, мера - {self.measurement_unit}.'
+        return f'{self.name}, ед.измерения - {self.measurement_unit}.'
 
 
 class Recipe(models.Model):

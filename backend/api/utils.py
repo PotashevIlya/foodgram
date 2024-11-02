@@ -7,19 +7,14 @@ from rest_framework import serializers
 from rest_framework.response import Response
 
 
-def check_authentification(context):
+def get_serializer_method_field_value(
+        context, model, obj, field_1, field_2
+):
     return (
         context
         and context['request'].user.is_authenticated
-    )
-
-
-def check_recipe_in_shopcart_or_favorites(context, model, obj):
-    return (
-        check_authentification(context)
         and model.objects.filter(
-            user_id=context['request'].user.id,
-            recipe=obj
+            **{f'{field_1}': context['request'].user.id, f'{field_2}': obj}
         ).exists()
     )
 
