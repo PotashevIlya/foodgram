@@ -32,14 +32,14 @@ class RecipeFilter(filter.FilterSet):
     def get_is_favorited(self, recipes, name, value):
         if value:
             return recipes.filter(
-                favourite__user_id=self.request.user.id
+                favourites__user_id=self.request.user.id
             )
         return recipes
 
     def get_is_in_shopping_cart(self, recipes, name, value):
         if value:
             return recipes.filter(
-                shoppingcart__user_id=self.request.user.id
+                shoppingcarts__user_id=self.request.user.id
             )
         return recipes
 

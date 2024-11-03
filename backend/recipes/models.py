@@ -100,7 +100,7 @@ class Tag(models.Model):
         verbose_name='Ярлык',
         max_length=32,
         unique=True,
-        help_text='Укажите название'
+        help_text='Укажите ярлык'
     )
 
     class Meta:
@@ -119,7 +119,7 @@ class Ingredient(models.Model):
         help_text='Укажите название продукта'
     )
     measurement_unit = models.CharField(
-        verbose_name='Мера',
+        verbose_name='Единица измерения',
         max_length=64,
         help_text='Укажите единицу измерения'
     )
@@ -200,7 +200,7 @@ class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        verbose_name='Игнредиент'
+        verbose_name='Продукт'
     )
     amount = models.IntegerField(
         verbose_name='Мера',
@@ -242,7 +242,7 @@ class UserRecipeBaseModel(models.Model):
             )
         ]
         ordering = ('-recipe__pub_date',)
-        default_related_name = '%(class)s'
+        default_related_name = '%(class)ss'
 
     def __str__(self):
         return f'{self.recipe} у {self.user}'
