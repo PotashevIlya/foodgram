@@ -30,8 +30,8 @@ class CookingTimeFilter(admin.SimpleListFilter):
     FAST = 30
     MIDDLE = 60
     COOKING_TIME_RANGES = {
-        f'До {FAST} мин': (0, FAST-1),
-        f'До {MIDDLE} мин': (FAST, MIDDLE-1),
+        f'До {FAST} мин': (0, FAST - 1),
+        f'До {MIDDLE} мин': (FAST, MIDDLE - 1),
         'Дольше': (MIDDLE, 10**10)
     }
     title = 'Время готовки'
