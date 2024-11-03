@@ -1,10 +1,6 @@
 import datetime
-from http import HTTPStatus
 
-from django.shortcuts import get_object_or_404
-from recipes.models import Ingredient, Recipe, RecipeIngredient
-from rest_framework import serializers
-from rest_framework.response import Response
+from recipes.models import Ingredient, RecipeIngredient
 
 
 def get_serializer_method_field_value(
@@ -17,23 +13,6 @@ def get_serializer_method_field_value(
             **{f'{field_1}': context['request'].user.id, f'{field_2}': obj}
         ).exists()
     )
-
-
-def add_or_remove_recipe(request, id, model, serializer):
-    if request.method == 'POST':
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=id)
-        obj, created = model.objects.get_or_create(user=user, recipe=recipe)
-        if not created:
-            raise serializers.ValidationError(
-                'Вы уже добавили этот рецепт'
-            )
-        return Response(
-            serializer(recipe).data,
-            status=HTTPStatus.CREATED
-        )
-    get_object_or_404(model, user=request.user, recipe_id=id).delete()
-    return Response(status=HTTPStatus.NO_CONTENT)
 
 
 def create_ingredients_in_recipe(recipe, ingredients):

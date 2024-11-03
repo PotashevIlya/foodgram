@@ -26,7 +26,7 @@ from .serializers import (
     RecipeWriteSerializer, SubscriptionReadSerializer,
     TagSerializer
 )
-from .utils import add_or_remove_recipe, generate_shopping_list
+from .utils import generate_shopping_list
 
 
 class FoodgramUserViewSet(UserViewSet):
@@ -70,7 +70,7 @@ class FoodgramUserViewSet(UserViewSet):
                 raise serializers.ValidationError(
                     'Нельзя подписаться на себя самого'
                 )
-            subcription, created = Subscription.objects.get_or_create(
+            _, created = Subscription.objects.get_or_create(
                 subscriber=subscriber,
                 author=author
             )
@@ -100,7 +100,7 @@ class FoodgramUserViewSet(UserViewSet):
         return self.get_paginated_response(
             SubscriptionReadSerializer(
                 self.paginate_queryset(FoodgramUser.objects.filter(
-                    followings__subscriber=request.user
+                    authors__subscriber=request.user
                 )),
                 context={'request': request},
                 many=True
@@ -139,6 +139,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeReadSerializer
         return RecipeWriteSerializer
 
+    @staticmethod
+    def create_or_delete_shopcart_or_favorite_object(request, id, model):
+        if request.method == 'POST':
+            user = request.user
+            recipe = get_object_or_404(Recipe, id=id)
+            _, created = model.objects.get_or_create(user=user, recipe=recipe)
+            if not created:
+                raise serializers.ValidationError(
+                    'Вы уже добавили этот рецепт'
+                )
+            return Response(
+                RecipeBriefSerializer(recipe).data,
+                status=HTTPStatus.CREATED
+            )
+        get_object_or_404(model, user=request.user, recipe_id=id).delete()
+        return Response(status=HTTPStatus.NO_CONTENT)
+
     @action(
         detail=False,
         methods=('POST', 'DELETE'),
@@ -146,8 +163,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def manage_favorite(self, request, id):
-        return add_or_remove_recipe(
-            request, id, Favourite, RecipeBriefSerializer
+        return self.create_or_delete_shopcart_or_favorite_object(
+            request, id, Favourite
         )
 
     @action(
@@ -157,8 +174,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def manage_shopping_cart(self, request, id):
-        return add_or_remove_recipe(
-            request, id, ShoppingCart, RecipeBriefSerializer
+        return self.create_or_delete_shopcart_or_favorite_object(
+            request, id, ShoppingCart
         )
 
     @action(
@@ -188,14 +205,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     @action(
-        detail=False,
-        url_path=r'(?P<id>\d+)/get-link',
+        detail=True,
+        url_path='get-link',
         permission_classes=(AllowAny,)
     )
-    def get_short_link(view, request, **kwargs):
-        if not Recipe.objects.filter(id=kwargs['id']).exists():
+    def get_short_link(view, request, pk):
+        if not Recipe.objects.filter(id=pk).exists():
             raise serializers.ValidationError(
-                'Рецепта не существует'
+                f'Рецепта не существует, id = {pk}'
             )
         return Response(
-            {'short-link': request.build_absolute_uri(f'/s/{kwargs["id"]}')})
+            {'short-link': request.build_absolute_uri(f'/s/{pk}')})

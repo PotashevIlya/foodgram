@@ -30,26 +30,22 @@ class CookingTimeFilter(admin.SimpleListFilter):
     FAST = 30
     MIDDLE = 60
     COOKING_TIME_RANGES = {
-        f'До {FAST} мин': (0, FAST),
-        f'До {MIDDLE} мин': (FAST, MIDDLE),
+        f'До {FAST} мин': (0, FAST-1),
+        f'До {MIDDLE} мин': (FAST, MIDDLE-1),
         'Дольше': (MIDDLE, 10**10)
     }
     title = 'Время готовки'
     parameter_name = 'cooking_time'
 
-    def get_filtered_recipes(self, queryset, param):
+    def get_filtered_recipes(self, param, queryset=Recipe.objects.all()):
         return queryset.filter(cooking_time__range=param)
 
     def lookups(self, request, model_admin):
-        string = '{name}({count})'
         return [
             (
                 name,
-                string.format(
-                    name=name, count=self.get_filtered_recipes(
-                        Recipe.objects.all(),
-                        range
-                    ).count()
+                '{name}({count})'.format(
+                    name=name, count=self.get_filtered_recipes(range).count()
                 )
             )
             for name, range in self.COOKING_TIME_RANGES.items()
@@ -58,7 +54,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value():
             return self.get_filtered_recipes(
-                queryset, self.COOKING_TIME_RANGES[f'{self.value()}']
+                self.COOKING_TIME_RANGES[self.value()], queryset
             )
         return queryset
 
@@ -66,7 +62,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
 @admin.register(FoodgramUser)
 class FoodgramUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        ('Аватар', {'fields': ('avatar', 'get_image', 'total_recipes',
+        ('Аватар', {'fields': ('avatar', 'get_avatar', 'total_recipes',
          'total_subscribers', 'total_subscriptions')}),
     )
     search_fields = ('username', 'email',)
@@ -79,9 +75,7 @@ class FoodgramUserAdmin(UserAdmin):
         'get_avatar', 'total_recipes', 'total_subscribers',
         'total_subscriptions'
     )
-    list_filter = (
-        'is_staff', 'is_superuser', 'is_active', 'groups', FoodgramUserFilter
-    )
+    list_filter = (FoodgramUserFilter,)
 
     @admin.display(description='Рецепты')
     def total_recipes(self, user):
@@ -95,7 +89,7 @@ class FoodgramUserAdmin(UserAdmin):
 
     @admin.display(description='Подписчики')
     def total_subscribers(self, user):
-        return user.followings.count()
+        return user.authors.count()
 
     @admin.display(description='Подписки')
     def total_subscriptions(self, user):
@@ -126,7 +120,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description='В избранном')
     def total_in_favorites(self, recipe):
-        return recipe.favourite.count()
+        return recipe.favourites.count()
 
     @admin.display(description='Изображение')
     @mark_safe
@@ -142,16 +136,9 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Продукты')
     @mark_safe
     def get_products(self, recipe):
-        product_string = ('{ingredient__name} в количестве {amount}'
-                          '{ingredient__measurement_unit}.')
-        ingredients_in_recipe = RecipeIngredient.objects.filter(
-            recipe=recipe
-        ).values(
-            'ingredient__name', 'ingredient__measurement_unit', 'amount'
-        )
         return '</br>'.join(
-            product_string.format(**product)
-            for product in ingredients_in_recipe
+            str(product)
+            for product in recipe.recipeingredients.all()
         )
 
 
@@ -173,6 +160,7 @@ class TagAdmin(admin.ModelAdmin):
 
 @admin.register(Favourite)
 class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
     search_fields = ('user__username', 'recipe')
     list_filter = ('user', 'recipe')
 

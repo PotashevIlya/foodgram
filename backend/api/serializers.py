@@ -44,11 +44,10 @@ class RecipeBriefSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class SubscriptionReadSerializer(serializers.ModelSerializer):
+class SubscriptionReadSerializer(FoodgramUserReadSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
         read_only=True, source='recipes.count')
-    is_subscribed = serializers.BooleanField(default=True)
 
     class Meta:
         model = FoodgramUser
@@ -99,7 +98,12 @@ class RecipeIngredientsReadSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
-    amount = serializers.IntegerField()
+    amount = serializers.IntegerField(
+        min_value=MIN_AMOUNT,
+        error_messages={
+            'min_value': f'Укажите кол-во больше {MIN_AMOUNT}'
+        }
+    )
 
     class Meta:
         model = RecipeIngredient
@@ -157,17 +161,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def validate_ingredients(self, ingredients):
         all_id = [ingredient['id'] for ingredient in ingredients]
         validate_ingredients_or_tags(all_id, Ingredient, 'ingredients')
-        small_amount = [
-            ingredient['id']
-            for ingredient in ingredients if ingredient['amount'] < MIN_AMOUNT
-        ]
-        if small_amount:
-            raise serializers.ValidationError(
-                {
-                    'id': small_amount,
-                    'error': f'Мера меньше допустимой. Минимум - {MIN_AMOUNT}'
-                }
-            )
         return ingredients
 
     def validate_tags(self, tags):

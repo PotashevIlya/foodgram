@@ -72,7 +72,7 @@ class Subscription(models.Model):
         FoodgramUser, on_delete=models.CASCADE, related_name='subscribers'
     )
     author = models.ForeignKey(
-        FoodgramUser, on_delete=models.CASCADE, related_name='followings'
+        FoodgramUser, on_delete=models.CASCADE, related_name='authors'
     )
 
     class Meta:
@@ -218,7 +218,8 @@ class RecipeIngredient(models.Model):
         default_related_name = 'recipeingredients'
 
     def __str__(self):
-        return f'{self.ingredient} в {self.recipe}'
+        return (f'{self.ingredient.name} в кол-ве '
+                f'{self.amount}{self.ingredient.measurement_unit}')
 
 
 class UserRecipeBaseModel(models.Model):
