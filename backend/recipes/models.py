@@ -69,10 +69,16 @@ class FoodgramUser(AbstractUser):
 
 class Subscription(models.Model):
     subscriber = models.ForeignKey(
-        FoodgramUser, on_delete=models.CASCADE, related_name='subscribers'
+        FoodgramUser,
+        on_delete=models.CASCADE,
+        verbose_name='Подписчик',
+        related_name='subscribers'
     )
     author = models.ForeignKey(
-        FoodgramUser, on_delete=models.CASCADE, related_name='authors'
+        FoodgramUser,
+        on_delete=models.CASCADE,
+        verbose_name='Автор',
+        related_name='authors'
     )
 
     class Meta:
@@ -172,7 +178,7 @@ class Recipe(models.Model):
         verbose_name='Теги'
     )
     cooking_time = models.PositiveIntegerField(
-        verbose_name='Время приготовления',
+        verbose_name='Время приготовления (мин)',
         validators=[
             MinValueValidator(
                 MIN_COOKING_TIME,

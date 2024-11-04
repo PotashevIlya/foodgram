@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
@@ -61,9 +62,18 @@ class CookingTimeFilter(admin.SimpleListFilter):
 
 @admin.register(FoodgramUser)
 class FoodgramUserAdmin(UserAdmin):
-    fieldsets = UserAdmin.fieldsets + (
-        ('Аватар', {'fields': ('avatar', 'get_avatar', 'total_recipes',
-         'total_subscribers', 'total_subscriptions')}),
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Персональная информация', {'fields': ('first_name',
+                                                'last_name',
+                                                'email')}),
+        ('Аватар', {'fields': ('avatar', 'get_avatar')}),
+        ('Прочая информация', {'fields': ('total_recipes',
+                                          'total_subscribers',
+                                          'total_subscriptions')}),
+        ('Права доступа', {'fields': ('is_active', 'is_staff',
+                                      'is_superuser', 'user_permissions')}),
+        ('Важные даты', {'fields': ('last_login', 'date_joined')})
     )
     search_fields = ('username', 'email',)
     list_display = (
@@ -146,16 +156,29 @@ class RecipeAdmin(admin.ModelAdmin):
 class IngredientAdmin(admin.ModelAdmin):
     search_fields = ('name', 'measurement_unit')
     list_filter = ('measurement_unit',)
+    list_display = ('name', 'measurement_unit', 'total_recipes',)
+    readonly_fields = ('total_recipes',)
+
+    @admin.display(description='Число рецептов')
+    def total_recipes(self, ingredient):
+        return ingredient.recipeingredients.count()
 
 
 @admin.register(Subscription)
 class SubscpiptionAdmin(admin.ModelAdmin):
     search_fields = ('subscriber__username', 'author__username')
+    list_display = ('subscriber', 'author')
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     search_fields = ('name', 'slug')
+    list_display = ('name', 'slug', 'total_recipes')
+    readonly_fields = ('total_recipes',)
+
+    @admin.display(description='Число рецептов')
+    def total_recipes(self, tag):
+        return tag.recipes.count()
 
 
 @admin.register(Favourite)
@@ -168,3 +191,6 @@ class FavoriteAdmin(admin.ModelAdmin):
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(FavoriteAdmin):
     pass
+
+
+admin.site.unregister(Group)
