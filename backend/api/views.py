@@ -140,7 +140,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeWriteSerializer
 
     @staticmethod
-    def create_or_delete_shopcart_or_favorite_object(request, id, model):
+    def create_or_delete(request, id, model):
         if request.method == 'POST':
             user = request.user
             recipe = get_object_or_404(Recipe, id=id)
@@ -163,7 +163,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def manage_favorite(self, request, id):
-        return self.create_or_delete_shopcart_or_favorite_object(
+        return self.create_or_delete(
             request, id, Favourite
         )
 
@@ -174,7 +174,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def manage_shopping_cart(self, request, id):
-        return self.create_or_delete_shopcart_or_favorite_object(
+        return self.create_or_delete(
             request, id, ShoppingCart
         )
 
@@ -201,7 +201,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 recipes_in_shopcart
             ),
             as_attachment=True,
-            filename='shopping_list.txt'
+            filename='shopping_list.txt',
+            content_type='text/plain'
         )
 
     @action(
